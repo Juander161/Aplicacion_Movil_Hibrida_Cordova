@@ -1,0 +1,578 @@
+/* ===== OPTIMIZACIONES MÓVILES ===== */
+
+/* Optimizaciones generales para móviles */
+@media (max-width: 767px) {
+    /* Mejorar rendimiento */
+    * {
+        -webkit-tap-highlight-color: transparent;
+        -webkit-touch-callout: none;
+        -webkit-user-select: none;
+        user-select: none;
+    }
+    
+    /* Permitir selección en inputs */
+    input, textarea, select {
+        -webkit-user-select: text;
+        user-select: text;
+    }
+    
+    /* Scroll suave */
+    body {
+        -webkit-overflow-scrolling: touch;
+        overflow-scrolling: touch;
+    }
+    
+    /* Área táctil mínima */
+    button, 
+    .btn-primary, 
+    .btn-secondary, 
+    .action-btn, 
+    .nav-item,
+    .quick-action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+}
+
+/* Optimizaciones para pantallas pequeñas */
+@media (max-width: 575px) {
+    /* Login/Register */
+    .login-container,
+    .register-container {
+        padding: 0.5rem;
+    }
+    
+    .login-form,
+    .register-form {
+        padding: 1.5rem;
+        margin: 0.5rem;
+    }
+    
+    /* App content */
+    .app-content {
+        padding: 0.5rem;
+        padding-bottom: calc(80px + 1rem);
+    }
+    
+    /* Header */
+    .header-content {
+        padding: 0.5rem;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .header-content h1 {
+        font-size: 1.2rem;
+    }
+    
+    /* Welcome card */
+    .welcome-card {
+        padding: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .welcome-card h2 {
+        font-size: 1.3rem;
+    }
+    
+    /* Stats */
+    .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .stat-card {
+        padding: 1rem;
+        flex-direction: row;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .stat-icon {
+        width: 45px;
+        height: 45px;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+    }
+    
+    .stat-content h3 {
+        font-size: 1.3rem;
+    }
+    
+    /* Quick actions */
+    .quick-actions {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+    }
+    
+    .quick-action-btn {
+        padding: 1rem;
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .quick-action-btn i {
+        font-size: 1.3rem;
+    }
+    
+    .quick-action-btn span {
+        font-size: 0.9rem;
+    }
+    
+    /* Section headers */
+    .section-header {
+        flex-direction: column;
+        gap: 0.75rem;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1.3rem;
+    }
+    
+    .section-header .btn-primary,
+    .section-header .btn-secondary {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Item cards */
+    .item-card {
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 1rem;
+    }
+    
+    .item-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 1rem;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .item-info h3 {
+        font-size: 1rem;
+    }
+    
+    .item-info p {
+        font-size: 0.8rem;
+    }
+    
+    .item-status {
+        align-self: flex-start;
+        margin-right: 0;
+        margin-bottom: 0.5rem;
+    }
+    
+    .status-badge,
+    .role-badge {
+        font-size: 0.7rem;
+        padding: 0.2rem 0.5rem;
+    }
+    
+    .item-actions {
+        align-self: flex-end;
+        gap: 0.25rem;
+    }
+    
+    .action-btn {
+        padding: 0.5rem;
+        font-size: 0.9rem;
+    }
+    
+    .item-details {
+        padding: 1rem;
+    }
+    
+    .detail-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+        margin-bottom: 0.5rem;
+    }
+    
+    .detail-item .label {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .detail-item .value {
+        font-size: 0.8rem;
+        word-break: break-word;
+    }
+    
+    /* Empty states */
+    .empty-state {
+        padding: 2rem 1rem;
+    }
+    
+    .empty-state i {
+        font-size: 2.5rem;
+    }
+    
+    .empty-state h3 {
+        font-size: 1.1rem;
+    }
+    
+    .empty-state p {
+        font-size: 0.8rem;
+    }
+    
+    /* Filters */
+    .citas-filters,
+    .usuarios-filters {
+        margin-bottom: 1rem;
+    }
+    
+    .filters select {
+        width: 100%;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Bottom navigation */
+    .bottom-nav {
+        padding: 0.5rem 0;
+    }
+    
+    .nav-item {
+        padding: 0.5rem;
+        font-size: 0.7rem;
+        gap: 0.25rem;
+    }
+    
+    .nav-item i {
+        font-size: 1rem;
+    }
+    
+    .nav-item span {
+        font-size: 0.7rem;
+    }
+    
+    /* Modals */
+    .modal {
+        padding: 0.5rem;
+    }
+    
+    .modal-content {
+        margin: 0;
+        max-height: calc(100vh - 1rem);
+        border-radius: 10px;
+    }
+    
+    .modal-header {
+        padding: 1rem;
+    }
+    
+    .modal-header h3 {
+        font-size: 1.1rem;
+    }
+    
+    .modal-form {
+        padding: 1rem;
+    }
+    
+    .modal-form .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .modal-form label {
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+    
+    .modal-form input,
+    .modal-form select,
+    .modal-form textarea {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-actions {
+        padding-top: 1rem;
+        gap: 0.75rem;
+    }
+    
+    .modal-actions .btn-primary,
+    .modal-actions .btn-secondary {
+        flex: 1;
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    /* Toast notifications */
+    .toast-container {
+        top: 0.5rem;
+        right: 0.5rem;
+        left: 0.5rem;
+    }
+    
+    .toast {
+        min-width: auto;
+        padding: 0.75rem 1rem;
+    }
+    
+    .toast-content {
+        gap: 0.5rem;
+    }
+    
+    .toast-content i {
+        font-size: 0.9rem;
+    }
+    
+    .toast-content span {
+        font-size: 0.8rem;
+    }
+    
+    /* Profile section */
+    .profile-info {
+        margin: 0;
+    }
+    
+    .profile-section {
+        padding: 1.5rem;
+    }
+    
+    .profile-section h3 {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+    }
+    
+    .profile-field {
+        padding: 0.75rem 0;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .profile-field label {
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+    
+    .profile-field span {
+        font-size: 0.8rem;
+    }
+}
+
+/* Landscape orientation */
+@media (max-width: 575px) and (orientation: landscape) {
+    .login-container,
+    .register-container {
+        padding: 0.25rem;
+    }
+    
+    .login-form,
+    .register-form {
+        padding: 1rem;
+        max-width: 400px;
+    }
+    
+    .app-content {
+        padding: 0.25rem;
+    }
+    
+    .header-content {
+        padding: 0.25rem;
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .welcome-card {
+        padding: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 0.5rem;
+    }
+    
+    .bottom-nav {
+        padding: 0.25rem 0;
+    }
+    
+    .nav-item {
+        padding: 0.25rem;
+        font-size: 0.6rem;
+    }
+    
+    .nav-item i {
+        font-size: 0.9rem;
+    }
+}
+
+/* Very small screens */
+@media (max-width: 320px) {
+    .login-header h1 {
+        font-size: 1.5rem;
+    }
+    
+    .login-form,
+    .register-form {
+        padding: 1rem;
+    }
+    
+    .app-content {
+        padding: 0.25rem;
+    }
+    
+    .header-content {
+        padding: 0.25rem;
+    }
+    
+    .welcome-card {
+        padding: 0.75rem;
+    }
+    
+    .welcome-card h2 {
+        font-size: 1.1rem;
+    }
+    
+    .stat-card {
+        padding: 0.75rem;
+    }
+    
+    .stat-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+    }
+    
+    .stat-content h3 {
+        font-size: 1.1rem;
+    }
+    
+    .quick-action-btn {
+        padding: 0.75rem;
+    }
+    
+    .quick-action-btn i {
+        font-size: 1.1rem;
+    }
+    
+    .quick-action-btn span {
+        font-size: 0.8rem;
+    }
+    
+    .section-header h2 {
+        font-size: 1.1rem;
+    }
+    
+    .item-header {
+        padding: 0.75rem;
+    }
+    
+    .item-icon {
+        width: 35px;
+        height: 35px;
+        font-size: 0.9rem;
+    }
+    
+    .item-info h3 {
+        font-size: 0.9rem;
+    }
+    
+    .modal-content {
+        margin: 0.125rem;
+    }
+    
+    .modal-header {
+        padding: 0.75rem;
+    }
+    
+    .modal-form {
+        padding: 0.75rem;
+    }
+    
+    .toast {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    .toast-content span {
+        font-size: 0.75rem;
+    }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    .stat-icon,
+    .item-icon,
+    .quick-action-btn i,
+    .nav-item i,
+    .action-btn i {
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}
+
+/* Touch devices */
+@media (hover: none) and (pointer: coarse) {
+    .quick-action-btn:active,
+    .stat-card:active,
+    .item-card:active,
+    .action-btn:active,
+    .btn-primary:active,
+    .btn-secondary:active,
+    .nav-item:active {
+        transform: scale(0.98);
+        transition: transform 0.1s ease;
+    }
+    
+    .action-btn {
+        min-width: 48px;
+        min-height: 48px;
+    }
+    
+    .nav-item {
+        min-width: 60px;
+        min-height: 60px;
+    }
+}
+
+/* Reduced motion */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .modal-content {
+        background: #1a1a1a;
+        color: #ffffff;
+    }
+    
+    .item-card {
+        background: #2a2a2a;
+        color: #ffffff;
+    }
+    
+    .stat-card {
+        background: #2a2a2a;
+        color: #ffffff;
+    }
+    
+    .quick-action-btn {
+        background: #2a2a2a;
+        color: #ffffff;
+    }
+} 

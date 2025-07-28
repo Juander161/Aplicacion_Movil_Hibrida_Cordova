@@ -1,0 +1,30 @@
+{
+  "name": "patitas-felices-app",
+  "displayName": "Patitas Felices",
+  "version": "1.0.0",
+  "description": "Aplicación móvil para la gestión de la clínica veterinaria Patitas Felices",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "cordova build android",
+    "run": "cordova run android",
+    "serve": "cordova serve"
+  },
+  "keywords": [
+    "veterinaria",
+    "mascotas",
+    "clinica",
+    "cordova",
+    "mobile"
+  ],
+  "author": "Clínica Veterinaria Patitas Felices",
+  "license": "ISC",
+  "cordova": {
+    "platforms": [
+      "android"
+    ]
+  },
+  "devDependencies": {
+    "cordova-android": "^14.0.1"
+  }
+}

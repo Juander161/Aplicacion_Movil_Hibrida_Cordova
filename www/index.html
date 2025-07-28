@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self' data: gap: https://ssl.gstatic.com https://cdnjs.cloudflare.com;
+      style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com;
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com;
+      connect-src 'self' http://localhost:3000 http://10.0.2.2:3000;
+      font-src 'self' https://cdnjs.cloudflare.com;
+    ">
+    <title>Clínica Veterinaria Patitas Felices</title>
+    <link rel="stylesheet" href="css/index.css">
+    <link rel="stylesheet" href="css/components.css">
+    <link rel="stylesheet" href="css/mobile.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="loading-screen">
+        <div class="loading-content">
+            <i class="fas fa-paw loading-icon"></i>
+            <h2>Patitas Felices</h2>
+            <div class="loading-spinner"></div>
+        </div>
+    </div>
+
+    <!-- Login View -->
+    <div id="login-view" class="view active">
+        <div class="login-container">
+            <div class="login-header">
+                <i class="fas fa-paw"></i>
+                <h1>Patitas Felices</h1>
+                <p>Clínica Veterinaria</p>
+            </div>
+            
+            <form id="login-form" class="login-form">
+                <div class="form-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="login-email" placeholder="Correo electrónico" required>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="login-password" placeholder="Contraseña" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword('login-password')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-sign-in-alt"></i>
+                    Iniciar Sesión
+                </button>
+            </form>
+            
+            <div class="login-footer">
+                <p>¿No tienes cuenta? <a href="#" onclick="showRegister()">Regístrate aquí</a></p>
+                <div class="demo-credentials">
+                    <small>Demo Admin: admin@clinica.com / admin123456</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Register View -->
+    <div id="register-view" class="view">
+        <div class="register-container">
+            <div class="register-header">
+                <button class="back-btn" onclick="showLogin()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <h1>Registro</h1>
+            </div>
+            
+            <form id="register-form" class="register-form">
+                <div class="form-group">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="register-name" placeholder="Nombre completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-envelope"></i>
+                    <input type="email" id="register-email" placeholder="Correo electrónico" required>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-phone"></i>
+                    <input type="tel" id="register-phone" placeholder="Teléfono" required>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input type="text" id="register-address" placeholder="Dirección" required>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="register-password" placeholder="Contraseña" required>
+                    <button type="button" class="toggle-password" onclick="togglePassword('register-password')">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                
+                <div class="form-group">
+                    <i class="fas fa-user-tag"></i>
+                    <select id="register-role" required>
+                        <option value="">Seleccionar rol</option>
+                        <option value="cliente">Cliente</option>
+                        <option value="veterinario">Veterinario</option>
+                        <option value="recepcionista">Recepcionista</option>
+                    </select>
+                </div>
+                
+                <button type="submit" class="btn-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Registrarse
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main App View -->
+    <div id="main-view" class="view">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1 id="header-title">Dashboard</h1>
+                <div class="header-actions">
+                    <button class="header-btn" onclick="showProfile()">
+                        <i class="fas fa-user"></i>
+                    </button>
+                    <button class="header-btn" onclick="logout()">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Content Area -->
+        <main class="app-content">
+            <!-- Dashboard -->
+            <div id="dashboard-content" class="content-section active">
+                <div class="welcome-card">
+                    <h2 id="welcome-message">Bienvenido</h2>
+                    <p id="user-role-display"></p>
+                </div>
+                
+                <div class="stats-grid" id="stats-grid">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+                
+                <div class="quick-actions" id="quick-actions">
+                    <!-- Quick actions will be populated based on user role -->
+                </div>
+            </div>
+
+            <!-- Mascotas -->
+            <div id="mascotas-content" class="content-section">
+                <div class="section-header">
+                    <h2>Mis Mascotas</h2>
+                    <button class="btn-primary" onclick="showAddMascota()">
+                        <i class="fas fa-plus"></i>
+                        Agregar
+                    </button>
+                </div>
+                <div id="mascotas-list" class="items-list">
+                    <!-- Mascotas will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Citas -->
+            <div id="citas-content" class="content-section">
+                <div class="section-header">
+                    <h2>Citas</h2>
+                    <button class="btn-primary" onclick="showAddCita()">
+                        <i class="fas fa-plus"></i>
+                        Nueva Cita
+                    </button>
+                </div>
+                <div class="citas-filters">
+                    <select id="citas-filter" onchange="loadCitas()">
+                        <option value="todas">Todas las citas</option>
+                        <option value="pendiente">Pendientes</option>
+                        <option value="confirmada">Confirmadas</option>
+                        <option value="completada">Completadas</option>
+                        <option value="cancelada">Canceladas</option>
+                    </select>
+                </div>
+                <div id="citas-list" class="items-list">
+                    <!-- Citas will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Historiales (Solo veterinarios) -->
+            <div id="historiales-content" class="content-section">
+                <div class="section-header">
+                    <h2>Historiales Médicos</h2>
+                    <button class="btn-primary" onclick="showAddHistorial()">
+                        <i class="fas fa-plus"></i>
+                        Nuevo Historial
+                    </button>
+                </div>
+                <div id="historiales-list" class="items-list">
+                    <!-- Historiales will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Usuarios (Admin/Recepcionista) -->
+            <div id="usuarios-content" class="content-section">
+                <div class="section-header">
+                    <h2>Usuarios</h2>
+                </div>
+                <div class="usuarios-filters">
+                    <select id="usuarios-filter" onchange="loadUsuarios()">
+                        <option value="todos">Todos los usuarios</option>
+                        <option value="cliente">Clientes</option>
+                        <option value="veterinario">Veterinarios</option>
+                        <option value="recepcionista">Recepcionistas</option>
+                        <option value="admin">Administradores</option>
+                    </select>
+                </div>
+                <div id="usuarios-list" class="items-list">
+                    <!-- Usuarios will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Perfil -->
+            <div id="perfil-content" class="content-section">
+                <div class="section-header">
+                    <h2>Mi Perfil</h2>
+                    <button class="btn-secondary" onclick="editProfile()">
+                        <i class="fas fa-edit"></i>
+                        Editar
+                    </button>
+                </div>
+                <div id="perfil-info" class="profile-info">
+                    <!-- Profile info will be loaded here -->
+                </div>
+            </div>
+        </main>
+
+        <!-- Bottom Navigation -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" onclick="showSection('dashboard')">
+                <i class="fas fa-home"></i>
+                <span>Inicio</span>
+            </button>
+            <button class="nav-item" onclick="showSection('mascotas')" id="nav-mascotas">
+                <i class="fas fa-paw"></i>
+                <span>Mascotas</span>
+            </button>
+            <button class="nav-item" onclick="showSection('citas')">
+                <i class="fas fa-calendar"></i>
+                <span>Citas</span>
+            </button>
+            <button class="nav-item" onclick="showSection('historiales')" id="nav-historiales" style="display: none;">
+                <i class="fas fa-file-medical"></i>
+                <span>Historiales</span>
+            </button>
+            <button class="nav-item" onclick="showSection('usuarios')" id="nav-usuarios" style="display: none;">
+                <i class="fas fa-users"></i>
+                <span>Usuarios</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Modals -->
+    <!-- Add/Edit Mascota Modal -->
+    <div id="mascota-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="mascota-modal-title">Agregar Mascota</h3>
+                <button class="close-btn" onclick="closeMascotaModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="mascota-form" class="modal-form">
+                <input type="hidden" id="mascota-id">
+                <div class="form-group">
+                    <label>Nombre</label>
+                    <input type="text" id="mascota-nombre" required>
+                </div>
+                <div class="form-group">
+                    <label>Especie</label>
+                    <select id="mascota-especie" required>
+                        <option value="">Seleccionar</option>
+                        <option value="Perro">Perro</option>
+                        <option value="Gato">Gato</option>
+                        <option value="Ave">Ave</option>
+                        <option value="Conejo">Conejo</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Raza</label>
+                    <input type="text" id="mascota-raza" required>
+                </div>
+                <div class="form-group">
+                    <label>Edad (años)</label>
+                    <input type="number" id="mascota-edad" min="0" step="0.1" required>
+                </div>
+                <div class="form-group">
+                    <label>Peso (kg)</label>
+                    <input type="number" id="mascota-peso" min="0" step="0.1" required>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeMascotaModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Cita Modal -->
+    <div id="cita-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="cita-modal-title">Nueva Cita</h3>
+                <button class="close-btn" onclick="closeCitaModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="cita-form" class="modal-form">
+                <input type="hidden" id="cita-id">
+                <div class="form-group">
+                    <label>Mascota</label>
+                    <select id="cita-mascota" required>
+                        <option value="">Seleccionar mascota</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Veterinario</label>
+                    <select id="cita-veterinario" required>
+                        <option value="">Seleccionar veterinario</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha</label>
+                    <input type="date" id="cita-fecha" required>
+                </div>
+                <div class="form-group">
+                    <label>Hora</label>
+                    <input type="time" id="cita-hora" required>
+                </div>
+                <div class="form-group">
+                    <label>Motivo</label>
+                    <textarea id="cita-motivo" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="cita-estado">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="confirmada">Confirmada</option>
+                        <option value="completada">Completada</option>
+                        <option value="cancelada">Cancelada</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeCitaModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Add/Edit Historial Modal -->
+    <div id="historial-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="historial-modal-title">Nuevo Historial Médico</h3>
+                <button class="close-btn" onclick="closeHistorialModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <form id="historial-form" class="modal-form">
+                <input type="hidden" id="historial-id">
+                <div class="form-group">
+                    <label>Mascota</label>
+                    <select id="historial-mascota" required>
+                        <option value="">Seleccionar mascota</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Fecha de Consulta</label>
+                    <input type="date" id="historial-fecha" required>
+                </div>
+                <div class="form-group">
+                    <label>Síntomas</label>
+                    <textarea id="historial-sintomas" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Diagnóstico</label>
+                    <textarea id="historial-diagnostico" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Tratamiento</label>
+                    <textarea id="historial-tratamiento" rows="3" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea id="historial-observaciones" rows="2"></textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-secondary" onclick="closeHistorialModal()">Cancelar</button>
+                    <button type="submit" class="btn-primary">Guardar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Scripts -->
+    <script src="js/config.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/mascotas.js"></script>
+    <script src="js/citas.js"></script>
+    <script src="js/historiales.js"></script>
+    <script src="js/usuarios.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
