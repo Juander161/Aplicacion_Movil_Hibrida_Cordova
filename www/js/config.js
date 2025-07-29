@@ -1,187 +1,314 @@
-// Configuración global de la aplicación
+// Configuración de la aplicación móvil
 const CONFIG = {
-    // URL base de la API - cambiar según el entorno
-    API_BASE_URL: 'http://localhost:3000/api',
+    // URL de la API - Ajustar según el entorno
+    API_BASE_URL: (function() {
+        // Detectar si estamos en un dispositivo móvil
+        if (window.cordova) {
+            // En producción, usar la IP del servidor donde corre Docker
+            return 'http://192.168.1.100:3000/api'; // Cambiar por tu IP
+        } else {
+            // Para desarrollo en navegador - usar localhost o 127.0.0.1
+            return 'http://127.0.0.1:3000/api';
+        }
+    })(),
     
-    // Configuración de la aplicación
+    // Configuraciones de la aplicación
     APP_NAME: 'Patitas Felices',
-    APP_VERSION: '1.0.0',
+    VERSION: '1.0.0',
     
-    // Configuración de autenticación
-    TOKEN_KEY: 'patitas_felices_token',
-    USER_KEY: 'patitas_felices_user',
+    // Configuraciones de UI
+    TOAST_DURATION: 3000,
+    LOADING_TIMEOUT: 10000,
     
-    // Configuración de timeouts
-    REQUEST_TIMEOUT: 10000, // 10 segundos
+    // Configuraciones de almacenamiento local
+    STORAGE_KEYS: {
+        TOKEN: 'auth_token',
+        USER: 'user_data',
+        SETTINGS: 'app_settings',
+        OFFLINE_DATA: 'offline_data'
+    },
     
-    // Configuración de paginación
-    ITEMS_PER_PAGE: 20,
+    // Configuraciones de red
+    NETWORK: {
+        TIMEOUT: 10000,
+        RETRY_ATTEMPTS: 3,
+        RETRY_DELAY: 1000
+    },
     
-    // Configuración de notificaciones
-    TOAST_DURATION: 3000, // 3 segundos
+    // Configuraciones específicas para móvil
+    MOBILE: {
+        VIBRATION_DURATION: 100,
+        CAMERA_QUALITY: 50,
+        GEOLOCATION_TIMEOUT: 15000,
+        GEOLOCATION_MAX_AGE: 300000
+    },
+    
+    // Estados de conexión
+    CONNECTION_STATUS: {
+        ONLINE: 'online',
+        OFFLINE: 'offline',
+        CHECKING: 'checking'
+    },
     
     // Roles de usuario
-    ROLES: {
-        CLIENTE: 'cliente',
+    USER_ROLES: {
+        ADMIN: 'admin',
         VETERINARIO: 'veterinario',
         RECEPCIONISTA: 'recepcionista',
-        ADMIN: 'admin'
-    },
-    
-    // Estados de citas
-    ESTADOS_CITA: {
-        PENDIENTE: 'pendiente',
-        CONFIRMADA: 'confirmada',
-        CANCELADA: 'cancelada',
-        COMPLETADA: 'completada'
-    },
-    
-    // Especies de mascotas
-    ESPECIES: {
-        PERRO: 'Perro',
-        GATO: 'Gato',
-        AVE: 'Ave',
-        REPTIL: 'Reptil',
-        OTRO: 'Otro'
+        CLIENTE: 'cliente'
     }
 };
 
-// Función para obtener la URL de la API según el entorno
-function getApiUrl() {
-    // En desarrollo, usar localhost
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        return 'http://localhost:3000/api';
+// Configuración específica para diferentes entornos
+const ENVIRONMENT_CONFIG = {
+    development: {
+        API_BASE_URL: 'http://127.0.0.1:3000/api',
+        DEBUG: true,
+        LOG_LEVEL: 'debug'
+    },
+    production: {
+        API_BASE_URL: 'https://tu-servidor.com/api', // Cambiar por tu dominio
+        DEBUG: false,
+        LOG_LEVEL: 'error'
+    }
+};
+
+// Detectar entorno actual
+const CURRENT_ENV = (function() {
+    const hostname = window.location.hostname;
+    if (hostname === 'localhost' || hostname === '127.0.0.1' || hostname.includes('192.168.')) {
+        return 'development';
+    }
+    return 'production';
+})();
+
+// Aplicar configuración del entorno
+Object.assign(CONFIG, ENVIRONMENT_CONFIG[CURRENT_ENV]);
+
+// Función para obtener la configuración
+window.getConfig = function(key) {
+    return key ? CONFIG[key] : CONFIG;
+};
+
+// Función para actualizar la URL de la API dinámicamente
+window.updateAPIUrl = function(newUrl) {
+    CONFIG.API_BASE_URL = newUrl;
+    // Actualizar también en el cliente API si existe
+    if (window.api && window.api.baseURL) {
+        window.api.baseURL = newUrl;
+    }
+    console.log('API URL actualizada a:', newUrl);
+};
+
+// Función para verificar si estamos en un dispositivo móvil
+window.isMobile = function() {
+    return window.cordova !== undefined;
+};
+
+// Función para verificar si estamos en línea
+window.isOnline = function() {
+    if (window.cordova && navigator.connection) {
+        return navigator.connection.type !== 'none';
+    }
+    return navigator.onLine;
+};
+
+// Función para obtener la URL actual de la API
+window.getCurrentAPIUrl = function() {
+    return CONFIG.API_BASE_URL;
+};
+
+// Función para cambiar entre entornos de desarrollo
+window.switchToDevelopment = function() {
+    CONFIG.API_BASE_URL = 'http://127.0.0.1:3000/api';
+    if (window.api && window.api.baseURL) {
+        window.api.baseURL = CONFIG.API_BASE_URL;
+    }
+    console.log('Cambiado a entorno de desarrollo:', CONFIG.API_BASE_URL);
+};
+
+window.switchToProduction = function() {
+    CONFIG.API_BASE_URL = 'https://tu-servidor.com/api';
+    if (window.api && window.api.baseURL) {
+        window.api.baseURL = CONFIG.API_BASE_URL;
+    }
+    console.log('Cambiado a entorno de producción:', CONFIG.API_BASE_URL);
+};
+
+// Función para probar la conexión a la API
+window.testAPIConnection = async function() {
+    try {
+        const response = await fetch(CONFIG.API_BASE_URL + '/health', {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        
+        if (response.ok) {
+            console.log('✅ Conexión a la API exitosa');
+            return true;
+        } else {
+            console.log('❌ Error en la conexión a la API:', response.status);
+            return false;
+        }
+    } catch (error) {
+        console.log('❌ Error conectando a la API:', error.message);
+        return false;
+    }
+};
+
+// Mostrar información de configuración al cargar
+console.log('🔧 Configuración de la aplicación:');
+console.log('   Entorno:', CURRENT_ENV);
+console.log('   API URL:', CONFIG.API_BASE_URL);
+console.log('   Debug:', CONFIG.DEBUG);
+console.log('   Móvil:', window.isMobile());
+
+// Logger para diferentes niveles
+window.Logger = {
+    debug: function(...args) {
+        if (CONFIG.DEBUG && CONFIG.LOG_LEVEL === 'debug') {
+            console.log('[DEBUG]', ...args);
+        }
+    },
+    info: function(...args) {
+        if (CONFIG.DEBUG) {
+            console.info('[INFO]', ...args);
+        }
+    },
+    warn: function(...args) {
+        console.warn('[WARN]', ...args);
+    },
+    error: function(...args) {
+        console.error('[ERROR]', ...args);
+    }
+};
+
+// Configuración específica para Cordova
+document.addEventListener('deviceready', function() {
+    Logger.info('Dispositivo listo, configurando aplicación móvil...');
+    
+    // Configurar StatusBar
+    if (window.StatusBar) {
+        StatusBar.styleDefault();
+        StatusBar.backgroundColorByHexString('#2E8B57');
     }
     
-    // En producción, usar la URL del servidor
-    // Cambiar esta URL por la URL real de tu API en producción
-    return 'https://tu-api-patitas-felices.com/api';
+    // Configurar SplashScreen
+    if (window.navigator && window.navigator.splashscreen) {
+        setTimeout(function() {
+            navigator.splashscreen.hide();
+        }, 3000);
+    }
+    
+    // Configurar eventos de pausa y resume
+    document.addEventListener('pause', onPause, false);
+    document.addEventListener('resume', onResume, false);
+    document.addEventListener('backbutton', onBackButton, false);
+    
+    // Eventos de red
+    document.addEventListener('online', onOnline, false);
+    document.addEventListener('offline', onOffline, false);
+    
+    Logger.info('Configuración móvil completada');
+}, false);
+
+// Funciones de eventos Cordova
+function onPause() {
+    Logger.info('Aplicación pausada');
+    // Guardar datos importantes
+    if (window.saveAppState) {
+        window.saveAppState();
+    }
 }
 
-// Actualizar la URL base de la API
-CONFIG.API_BASE_URL = getApiUrl();
-
-// Función para validar si estamos en un dispositivo móvil
-function isMobileDevice() {
-    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+function onResume() {
+    Logger.info('Aplicación reanudada');
+    // Verificar conexión y sincronizar datos
+    if (window.checkConnection) {
+        window.checkConnection();
+    }
 }
 
-// Función para obtener el tamaño de pantalla
-function getScreenSize() {
-    return {
-        width: window.innerWidth,
-        height: window.innerHeight
-    };
-}
-
-// Función para formatear fechas
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-// Función para formatear fechas y horas
-function formatDateTime(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
-}
-
-// Función para formatear moneda
-function formatCurrency(amount) {
-    return new Intl.NumberFormat('es-MX', {
-        style: 'currency',
-        currency: 'MXN'
-    }).format(amount);
-}
-
-// Función para obtener el icono de especie
-function getEspecieIcon(especie) {
-    const icons = {
-        'Perro': '🐕',
-        'Gato': '🐱',
-        'Ave': '🦜',
-        'Reptil': '🦎',
-        'Otro': '🐾'
-    };
-    return icons[especie] || '🐾';
-}
-
-// Función para obtener el color de estado
-function getEstadoColor(estado) {
-    const colors = {
-        'pendiente': '#ffc107',
-        'confirmada': '#28a745',
-        'cancelada': '#dc3545',
-        'completada': '#007bff'
-    };
-    return colors[estado] || '#6c757d';
-}
-
-// Función para validar email
-function isValidEmail(email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-}
-
-// Función para validar teléfono
-function isValidPhone(phone) {
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    return phoneRegex.test(phone.replace(/\s/g, ''));
-}
-
-// Función para generar ID único
-function generateId() {
-    return Date.now().toString(36) + Math.random().toString(36).substr(2);
-}
-
-// Función para debounce
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Función para throttle
-function throttle(func, limit) {
-    let inThrottle;
-    return function() {
-        const args = arguments;
-        const context = this;
-        if (!inThrottle) {
-            func.apply(context, args);
-            inThrottle = true;
-            setTimeout(() => inThrottle = false, limit);
+function onBackButton(e) {
+    e.preventDefault();
+    
+    // Manejar el botón atrás según la vista actual
+    if (window.handleBackButton) {
+        window.handleBackButton();
+    } else {
+        // Comportamiento por defecto
+        if (navigator.notification) {
+            navigator.notification.confirm(
+                '¿Deseas salir de la aplicación?',
+                function(buttonIndex) {
+                    if (buttonIndex === 1) {
+                        navigator.app.exitApp();
+                    }
+                },
+                'Salir',
+                ['Sí', 'No']
+            );
         }
-    };
+    }
 }
 
-// Exportar configuración global
-window.CONFIG = CONFIG;
-window.isMobileDevice = isMobileDevice;
-window.getScreenSize = getScreenSize;
-window.formatDate = formatDate;
-window.formatDateTime = formatDateTime;
-window.formatCurrency = formatCurrency;
-window.getEspecieIcon = getEspecieIcon;
-window.getEstadoColor = getEstadoColor;
-window.isValidEmail = isValidEmail;
-window.isValidPhone = isValidPhone;
-window.generateId = generateId;
-window.debounce = debounce;
-window.throttle = throttle; 
+function onOnline() {
+    Logger.info('Conexión restaurada');
+    if (window.handleOnline) {
+        window.handleOnline();
+    }
+}
+
+function onOffline() {
+    Logger.info('Conexión perdida');
+    if (window.handleOffline) {
+        window.handleOffline();
+    }
+}
+
+// Utilidades para almacenamiento local
+window.Storage = {
+    set: function(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (e) {
+            Logger.error('Error guardando en localStorage:', e);
+            return false;
+        }
+    },
+    
+    get: function(key) {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : null;
+        } catch (e) {
+            Logger.error('Error leyendo localStorage:', e);
+            return null;
+        }
+    },
+    
+    remove: function(key) {
+        try {
+            localStorage.removeItem(key);
+            return true;
+        } catch (e) {
+            Logger.error('Error eliminando de localStorage:', e);
+            return false;
+        }
+    },
+    
+    clear: function() {
+        try {
+            localStorage.clear();
+            return true;
+        } catch (e) {
+            Logger.error('Error limpiando localStorage:', e);
+            return false;
+        }
+    }
+};
+
+Logger.info('Configuración cargada:', CONFIG);

@@ -1,261 +1,329 @@
-# 🐾 Aplicación Móvil - Clínica Veterinaria Patitas Felices
+# 🐾 Patitas Felices - Aplicación Móvil Híbrida
 
-Aplicación móvil híbrida desarrollada con Apache Cordova para la gestión completa de una clínica veterinaria. Integrada con una API REST de MongoDB para proporcionar una experiencia completa de gestión veterinaria.
+Aplicación móvil híbrida desarrollada con Apache Cordova para la gestión de la Clínica Veterinaria Patitas Felices.
 
 ## 🚀 Características
 
-### ✅ Autenticación y Roles
-- **Sistema de Login/Registro** con JWT
-- **Roles de Usuario**: Cliente, Veterinario, Recepcionista, Administrador
-- **Gestión de Perfiles** personalizada por rol
+- ✅ **Multiplataforma** - Funciona en Android, iOS y navegador web
+- ✅ **Autenticación JWT** - Sistema completo de login y registro
+- ✅ **Roles de Usuario** - Cliente, Veterinario, Recepcionista, Admin
+- ✅ **Gestión de Mascotas** - CRUD completo de mascotas
+- ✅ **Sistema de Citas** - Programación y gestión de citas
+- ✅ **Historiales Médicos** - Registro de consultas veterinarias
+- ✅ **Gestión de Usuarios** - Administración de usuarios del sistema
+- ✅ **Modo Offline** - Funcionalidad básica sin conexión
+- ✅ **UI Responsive** - Interfaz adaptada para móviles
+- ✅ **Notificaciones Toast** - Feedback visual para el usuario
 
-### ✅ Gestión de Mascotas
-- **CRUD Completo** de mascotas
-- **Información Detallada**: Nombre, especie, raza, edad, peso
-- **Asociación con Propietarios**
+## 📋 Requisitos Previos
 
-### ✅ Sistema de Citas
-- **Programación de Citas** con fecha y hora
-- **Asignación de Veterinarios**
-- **Estados de Cita**: Pendiente, Confirmada, Completada, Cancelada
-- **Filtros por Estado**
-
-### ✅ Historiales Médicos
-- **Registro de Consultas** (solo veterinarios)
-- **Síntomas, Diagnóstico y Tratamiento**
-- **Observaciones Médicas**
-- **Historial Completo por Mascota**
-
-### ✅ Gestión de Usuarios
-- **Vista de Usuarios** (admin/recepcionista)
-- **Filtros por Rol**
-- **Gestión de Permisos**
-
-### ✅ Dashboard Interactivo
-- **Estadísticas en Tiempo Real**
-- **Acciones Rápidas** según rol
-- **Interfaz Responsive**
-
-## 📱 Tecnologías Utilizadas
-
-- **Apache Cordova** - Framework híbrido
-- **HTML5, CSS3, JavaScript ES6+**
-- **Font Awesome** - Iconografía
-- **API REST** - Comunicación con backend
-- **JWT** - Autenticación segura
-- **LocalStorage** - Persistencia local
-
-## 🛠️ Instalación y Configuración
-
-### Prerrequisitos
+### Para Desarrollo
 - Node.js (v14 o superior)
+- npm o yarn
 - Apache Cordova CLI
-- API REST funcionando en `http://localhost:3000`
+- Android Studio (para desarrollo Android)
+- Xcode (para desarrollo iOS, solo macOS)
 
-### 1. Instalar Cordova CLI
-```bash
-npm install -g cordova
-```
+### Para Ejecutar la API
+- MongoDB (local o Atlas)
+- Node.js (v14 o superior)
 
-### 2. Clonar el proyecto
+## 🛠️ Instalación
+
+### 1. Clonar el Repositorio
 ```bash
 git clone <url-del-repositorio>
-cd Veterinaria
+cd Aplicacion_Movil_Hibrida_Cordova
 ```
 
-### 3. Instalar dependencias
+### 2. Instalar Dependencias
 ```bash
 npm install
 ```
 
-### 4. Configurar la API
-Editar `www/js/config.js` para apuntar a tu API:
-```javascript
-API_BASE_URL: 'http://localhost:3000/api'
-```
-
-### 5. Ejecutar la aplicación
-
-#### Desarrollo (navegador)
+### 3. Agregar Plataformas
 ```bash
-cordova serve
-```
+# Para desarrollo en navegador
+cordova platform add browser
 
-#### Android
-```bash
+# Para desarrollo en Android
 cordova platform add android
-cordova build android
-cordova run android
-```
 
-#### iOS
-```bash
+# Para desarrollo en iOS (solo macOS)
 cordova platform add ios
-cordova build ios
-cordova run ios
 ```
 
-## 🔧 Configuración de la API
+### 4. Instalar Plugins
+```bash
+cordova plugin add cordova-plugin-whitelist
+cordova plugin add cordova-plugin-statusbar
+cordova plugin add cordova-plugin-splashscreen
+cordova plugin add cordova-plugin-device
+cordova plugin add cordova-plugin-file
+cordova plugin add cordova-plugin-network-information
+```
 
-La aplicación está configurada para trabajar con la API REST de MongoDB. Asegúrate de que tu API esté ejecutándose en `http://localhost:3000` con los siguientes endpoints:
+## 🚀 Ejecutar la Aplicación
 
-### Endpoints Requeridos
-- `POST /api/auth/login` - Autenticación
-- `POST /api/auth/registro` - Registro de usuarios
-- `GET /api/auth/perfil` - Perfil del usuario
-- `GET /api/mascotas` - Listar mascotas
-- `POST /api/mascotas` - Crear mascota
-- `PUT /api/mascotas/:id` - Actualizar mascota
-- `DELETE /api/mascotas/:id` - Eliminar mascota
-- `GET /api/citas` - Listar citas
-- `POST /api/citas` - Crear cita
-- `PUT /api/citas/:id` - Actualizar cita
-- `DELETE /api/citas/:id` - Eliminar cita
-- `GET /api/historiales` - Listar historiales
-- `POST /api/historiales` - Crear historial
-- `PUT /api/historiales/:id` - Actualizar historial
-- `DELETE /api/historiales/:id` - Eliminar historial
-- `GET /api/usuarios` - Listar usuarios
-- `DELETE /api/usuarios/:id` - Eliminar usuario
+### Desarrollo en Navegador
+```bash
+# Servir la aplicación en navegador
+npm run serve
 
-## 👥 Roles y Permisos
+# O con live reload
+npm run dev
+```
 
-### 🔐 Cliente
-- ✅ Gestionar sus propias mascotas
-- ✅ Programar y ver sus citas
-- ✅ Ver historiales de sus mascotas
+### Desarrollo en Android
+```bash
+# Verificar requisitos
+cordova requirements
+
+# Ejecutar en emulador
+npm run emulate:android
+
+# Ejecutar en dispositivo físico
+npm run run:android
+```
+
+### Desarrollo en iOS (solo macOS)
+```bash
+# Ejecutar en simulador
+npm run emulate:ios
+
+# Ejecutar en dispositivo físico
+npm run run:ios
+```
+
+## 🔧 Configuración
+
+### Configurar URL de la API
+Edita el archivo `www/js/config.js` y actualiza la URL de la API:
+
+```javascript
+// Para desarrollo local
+API_BASE_URL: 'http://localhost:3000/api'
+
+// Para servidor de producción
+API_BASE_URL: 'https://tu-servidor.com/api'
+```
+
+### Configurar para Dispositivo Móvil
+Si vas a probar en un dispositivo móvil, actualiza la IP en `config.js`:
+
+```javascript
+// Cambiar por la IP de tu computadora en la red local
+return 'http://192.168.1.100:3000/api';
+```
+
+## 📱 Funcionalidades por Rol
+
+### 👤 Cliente
+- Ver y gestionar sus mascotas
+- Programar citas veterinarias
+- Ver historial de citas
+- Actualizar información de perfil
 
 ### 🏥 Veterinario
-- ✅ Ver todas las mascotas
-- ✅ Gestionar historiales médicos
-- ✅ Ver y actualizar citas
-- ✅ Crear nuevos historiales
+- Ver todas las mascotas
+- Gestionar historiales médicos
+- Ver y actualizar citas
+- Crear nuevos historiales
 
-### 📋 Recepcionista
-- ✅ Ver usuarios del sistema
-- ✅ Gestionar citas
-- ✅ Ver mascotas
-- ✅ Asignar veterinarios
+### 📞 Recepcionista
+- Ver usuarios del sistema
+- Gestionar citas
+- Ver información de mascotas
+- Asistir en la programación
 
-### 👑 Administrador
-- ✅ Acceso completo a todas las funcionalidades
-- ✅ Gestionar usuarios
-- ✅ Eliminar registros
-- ✅ Control total del sistema
+### 👨‍💼 Administrador
+- Acceso completo a todas las funcionalidades
+- Gestionar usuarios del sistema
+- Ver estadísticas generales
+- Control total del sistema
+
+## 🔐 Usuario Administrador por Defecto
+
+Al iniciar la API por primera vez, se crea automáticamente un usuario administrador:
+
+```
+Email: admin@clinica.com
+Password: admin123456
+```
+
+⚠️ **IMPORTANTE**: Cambia estas credenciales después del primer login por seguridad.
+
+## 📁 Estructura del Proyecto
+
+```
+Aplicacion_Movil_Hibrida_Cordova/
+├── config.xml                 # Configuración de Cordova
+├── package.json              # Dependencias y scripts
+├── www/                      # Código fuente de la aplicación
+│   ├── index.html           # Página principal
+│   ├── css/                 # Estilos CSS
+│   │   ├── index.css       # Estilos principales
+│   │   ├── components.css  # Componentes UI
+│   │   └── mobile.css      # Estilos específicos móvil
+│   ├── js/                  # JavaScript
+│   │   ├── app.js          # Aplicación principal
+│   │   ├── api.js          # Cliente API
+│   │   ├── config.js       # Configuración
+│   │   ├── auth.js         # Autenticación
+│   │   ├── mascotas.js     # Gestión de mascotas
+│   │   ├── citas.js        # Gestión de citas
+│   │   ├── historiales.js  # Historiales médicos
+│   │   ├── usuarios.js     # Gestión de usuarios
+│   │   ├── ui.js           # Utilidades UI
+│   │   └── navigation.js   # Navegación
+│   └── img/                 # Imágenes e iconos
+└── README.md               # Este archivo
+```
+
+## 🔌 Plugins de Cordova Utilizados
+
+- **cordova-plugin-whitelist**: Control de acceso a recursos
+- **cordova-plugin-statusbar**: Gestión de la barra de estado
+- **cordova-plugin-splashscreen**: Pantalla de carga
+- **cordova-plugin-device**: Información del dispositivo
+- **cordova-plugin-file**: Acceso al sistema de archivos
+- **cordova-plugin-network-information**: Información de red
 
 ## 🎨 Características de la UI
 
-### ✨ Diseño Moderno
-- **Gradientes y Sombras** para profundidad visual
-- **Animaciones Suaves** en transiciones
-- **Iconografía Font Awesome** para mejor UX
-- **Colores por Rol** para identificación rápida
+- **Diseño Material Design** - Interfaz moderna y intuitiva
+- **Colores Veterinarios** - Paleta de colores verde y naranja
+- **Iconografía Font Awesome** - Iconos consistentes
+- **Animaciones Suaves** - Transiciones fluidas
+- **Responsive Design** - Adaptable a diferentes tamaños
+- **Modo Oscuro** - Soporte para tema oscuro (futuro)
 
-### 📱 Responsive Design
-- **Adaptable a diferentes pantallas**
-- **Navegación táctil optimizada**
-- **Modales y formularios móviles**
+## 📊 Funcionalidades Técnicas
 
-### 🎯 Interacciones
-- **Hover Effects** en elementos interactivos
-- **Loading States** para feedback visual
-- **Toast Notifications** para confirmaciones
-- **Smooth Transitions** entre vistas
+### Autenticación
+- JWT (JSON Web Tokens)
+- Almacenamiento seguro local
+- Verificación automática de sesión
+- Logout automático en token expirado
 
-## 🔐 Seguridad
+### Gestión de Datos
+- Sincronización con API REST
+- Almacenamiento local para modo offline
+- Cache inteligente de datos
+- Reintentos automáticos en errores de red
 
-### Autenticación JWT
-- **Tokens seguros** para autenticación
-- **Expiración automática** de sesiones
-- **Almacenamiento local** seguro
-
-### Validación de Datos
-- **Validación en frontend** para mejor UX
-- **Sanitización de inputs**
-- **Manejo de errores** robusto
-
-## 📊 Funcionalidades por Rol
-
-### Dashboard Personalizado
-Cada rol ve estadísticas relevantes:
-- **Cliente**: Sus mascotas y citas
-- **Veterinario**: Historiales y citas
-- **Recepcionista**: Usuarios y citas
-- **Admin**: Estadísticas completas
-
-### Acciones Rápidas
-Botones de acceso directo según el rol del usuario para las tareas más comunes.
+### Seguridad
+- Validación de formularios
+- Sanitización de datos
+- Control de acceso basado en roles
+- Headers de seguridad
 
 ## 🐛 Solución de Problemas
 
 ### Error de Conexión a la API
-1. Verificar que la API esté ejecutándose
-2. Revisar la URL en `config.js`
-3. Comprobar CORS en el servidor
+1. Verifica que la API esté ejecutándose
+2. Confirma la URL en `config.js`
+3. Verifica la conectividad de red
+4. Revisa los logs de la consola
 
-### Error de Autenticación
-1. Verificar credenciales
-2. Limpiar localStorage
-3. Revisar token JWT
+### Error en Android
+1. Verifica que Android Studio esté instalado
+2. Confirma que las variables de entorno estén configuradas
+3. Ejecuta `cordova requirements` para verificar
+4. Limpia el proyecto: `cordova clean`
 
-### Problemas de Build
-1. Verificar que Cordova esté instalado
-2. Revisar dependencias de plataforma
-3. Limpiar cache: `cordova clean`
+### Error en iOS
+1. Verifica que Xcode esté instalado
+2. Confirma que las herramientas de línea de comandos estén instaladas
+3. Ejecuta `cordova requirements` para verificar
+4. Limpia el proyecto: `cordova clean`
 
-## 📱 Uso de la Aplicación
+### Error de Plugins
+1. Verifica que todos los plugins estén instalados
+2. Ejecuta `cordova plugin list` para verificar
+3. Reinstala los plugins si es necesario
+4. Limpia y reconstruye el proyecto
 
-### 1. Inicio de Sesión
-- Usar credenciales de la API
-- Demo admin: `admin@clinica.com` / `admin123456`
-
-### 2. Navegación
-- **Inicio**: Dashboard con estadísticas
-- **Mascotas**: Gestión de mascotas
-- **Citas**: Programación y gestión
-- **Historiales**: Registros médicos (veterinarios)
-- **Usuarios**: Gestión de usuarios (admin/recep)
-
-### 3. Gestión de Datos
-- **Agregar**: Botón "+" en cada sección
-- **Editar**: Icono de lápiz en cada elemento
-- **Eliminar**: Icono de papelera (con confirmación)
-
-## 🚀 Despliegue
-
-### Producción
-1. Cambiar URL de API en `config.js`
-2. Build para plataforma específica
-3. Firmar aplicación (Android/iOS)
-4. Subir a stores
+## 📱 Comandos Útiles
 
 ### Desarrollo
 ```bash
-# Servir en navegador
-cordova serve
+# Ver información del proyecto
+cordova info
 
-# Build para Android
-cordova build android
+# Ver requisitos del sistema
+cordova requirements
 
-# Build para iOS
-cordova build ios
+# Limpiar proyecto
+cordova clean
+
+# Preparar proyecto
+cordova prepare
 ```
 
-## 📝 Notas de Desarrollo
+### Construcción
+```bash
+# Construir para navegador
+npm run build:browser
 
-- La aplicación utiliza **ES6+** para mejor rendimiento
-- **Modularización** para mantenimiento fácil
-- **Responsive design** para múltiples dispositivos
-- **Optimización** para rendimiento móvil
+# Construir para Android
+npm run build:android
+
+# Construir para iOS
+npm run build:ios
+```
+
+### Depuración
+```bash
+# Ver logs en tiempo real (Android)
+adb logcat | grep "Cordova"
+
+# Ver logs en tiempo real (iOS)
+xcrun simctl spawn booted log stream --predicate 'process == "Cordova"'
+```
+
+## 🔄 Actualizaciones
+
+### Actualizar Cordova
+```bash
+npm update -g cordova
+```
+
+### Actualizar Plugins
+```bash
+cordova plugin update
+```
+
+### Actualizar Plataformas
+```bash
+cordova platform update android
+cordova platform update ios
+```
+
+## 📄 Licencia
+
+ISC License
 
 ## 👨‍💻 Autor
 
 Juan de Dios Valero Casillas
 
-## 📄 Licencia
+## 🤝 Contribuir
 
-ISC
+1. Fork el proyecto
+2. Crea una rama para tu feature (`git checkout -b feature/AmazingFeature`)
+3. Commit tus cambios (`git commit -m 'Add some AmazingFeature'`)
+4. Push a la rama (`git push origin feature/AmazingFeature`)
+5. Abre un Pull Request
+
+## 📞 Soporte
+
+Para soporte técnico o preguntas sobre la aplicación:
+
+- 📧 Email: admin@clinica.com
+- 🌐 Sitio web: https://patitasfelices.com
+- 📱 Teléfono: +52 123 456 7890
 
 ---
 
-**¡Disfruta gestionando tu clínica veterinaria con Patitas Felices! 🐾** 
+**¡Gracias por usar Patitas Felices! 🐾** 

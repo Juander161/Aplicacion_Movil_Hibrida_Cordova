@@ -1,450 +1,421 @@
-// Módulo de interfaz de usuario
-class UI {
+// Módulo de utilidades de interfaz de usuario
+class UIManager {
     constructor() {
-        this.currentUser = null;
+        this.currentTheme = 'light';
         this.init();
     }
 
     init() {
         this.setupEventListeners();
-        this.checkAuthStatus();
+        this.loadTheme();
     }
 
     setupEventListeners() {
-        // Login form
-        const loginForm = document.getElementById('login-form');
-        if (loginForm) {
-            loginForm.addEventListener('submit', this.handleLogin.bind(this));
-        }
-
-        // Register form
-        const registerForm = document.getElementById('register-form');
-        if (registerForm) {
-            registerForm.addEventListener('submit', this.handleRegister.bind(this));
-        }
-
-        // Mascota form
-        const mascotaForm = document.getElementById('mascota-form');
-        if (mascotaForm) {
-            mascotaForm.addEventListener('submit', this.handleMascotaSubmit.bind(this));
-        }
-
-        // Cita form
-        const citaForm = document.getElementById('cita-form');
-        if (citaForm) {
-            citaForm.addEventListener('submit', this.handleCitaSubmit.bind(this));
-        }
-
-        // Historial form
-        const historialForm = document.getElementById('historial-form');
-        if (historialForm) {
-            historialForm.addEventListener('submit', this.handleHistorialSubmit.bind(this));
-        }
-    }
-
-    async handleLogin(event) {
-        event.preventDefault();
-        
-        const email = document.getElementById('login-email').value;
-        const password = document.getElementById('login-password').value;
-
-        try {
-            showLoading();
-            const response = await api.login(email, password);
-            
-            if (response.token) {
-                api.setAuthToken(response.token);
-                localStorage.setItem(CONFIG.USER_KEY, JSON.stringify(response.usuario));
-                this.currentUser = response.usuario;
-                
-                showToast('Inicio de sesión exitoso', 'success');
-                this.showMainView();
-                this.loadDashboard();
+        // Event listeners para modales
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('modal')) {
+                this.closeModal(e.target);
             }
-        } catch (error) {
-            showToast(error.message || 'Error al iniciar sesión', 'error');
-        } finally {
-            hideLoading();
+        });
+
+        // Event listeners para toasts
+        this.setupToastListeners();
+
+        // Event listeners para formularios
+        this.setupFormListeners();
+    }
+
+    // === MODALES ===
+    showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
     }
 
-    async handleRegister(event) {
-        event.preventDefault();
-        
-        const userData = {
-            nombre: document.getElementById('register-name').value,
-            email: document.getElementById('register-email').value,
-            telefono: document.getElementById('register-phone').value,
-            direccion: document.getElementById('register-address').value,
-            password: document.getElementById('register-password').value,
-            rol: document.getElementById('register-role').value
+    closeModal(modalElement) {
+        if (modalElement) {
+            modalElement.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+    closeAllModals() {
+        document.querySelectorAll('.modal.active').forEach(modal => {
+            this.closeModal(modal);
+        });
+    }
+
+    // === TOASTS ===
+    setupToastListeners() {
+        const toastContainer = document.getElementById('toast-container');
+        if (toastContainer) {
+            // Limpiar toasts antiguos
+            setInterval(() => {
+                const oldToasts = toastContainer.querySelectorAll('.toast:not(.show)');
+                oldToasts.forEach(toast => {
+                    if (Date.now() - toast.dataset.timestamp > 5000) {
+                        toast.remove();
+                    }
+                });
+            }, 1000);
+        }
+    }
+
+    showToast(message, type = 'info', duration = CONFIG.TOAST_DURATION) {
+        const toastContainer = document.getElementById('toast-container');
+        if (!toastContainer) {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+            return;
+        }
+
+        const toast = document.createElement('div');
+        toast.className = `toast ${type}`;
+        toast.dataset.timestamp = Date.now();
+
+        const icons = {
+            success: 'fas fa-check-circle',
+            error: 'fas fa-exclamation-circle',
+            warning: 'fas fa-exclamation-triangle',
+            info: 'fas fa-info-circle'
         };
 
-        try {
-            showLoading();
-            const response = await api.register(userData);
-            
-            showToast('Registro exitoso. Por favor, inicia sesión.', 'success');
-            showLogin();
-        } catch (error) {
-            showToast(error.message || 'Error al registrarse', 'error');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async handleMascotaSubmit(event) {
-        event.preventDefault();
-        
-        const mascotaData = {
-            nombre: document.getElementById('mascota-nombre').value,
-            especie: document.getElementById('mascota-especie').value,
-            raza: document.getElementById('mascota-raza').value,
-            edad: parseFloat(document.getElementById('mascota-edad').value),
-            peso: parseFloat(document.getElementById('mascota-peso').value)
-        };
-
-        const mascotaId = document.getElementById('mascota-id').value;
-
-        try {
-            showLoading();
-            
-            if (mascotaId) {
-                await api.updateMascota(mascotaId, mascotaData);
-                showToast('Mascota actualizada exitosamente', 'success');
-            } else {
-                await api.createMascota(mascotaData);
-                showToast('Mascota creada exitosamente', 'success');
-            }
-            
-            closeMascotaModal();
-            loadMascotas();
-        } catch (error) {
-            showToast(error.message || 'Error al guardar mascota', 'error');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async handleCitaSubmit(event) {
-        event.preventDefault();
-        
-        const citaData = {
-            id_mascota: document.getElementById('cita-mascota').value,
-            id_veterinario: document.getElementById('cita-veterinario').value,
-            fecha_hora: api.combineDateTime(
-                document.getElementById('cita-fecha').value,
-                document.getElementById('cita-hora').value
-            ),
-            motivo: document.getElementById('cita-motivo').value,
-            estado: document.getElementById('cita-estado').value
-        };
-
-        const citaId = document.getElementById('cita-id').value;
-
-        try {
-            showLoading();
-            
-            if (citaId) {
-                await api.updateCita(citaId, citaData);
-                showToast('Cita actualizada exitosamente', 'success');
-            } else {
-                await api.createCita(citaData);
-                showToast('Cita creada exitosamente', 'success');
-            }
-            
-            closeCitaModal();
-            loadCitas();
-        } catch (error) {
-            showToast(error.message || 'Error al guardar cita', 'error');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    async handleHistorialSubmit(event) {
-        event.preventDefault();
-        
-        const historialData = {
-            id_mascota: document.getElementById('historial-mascota').value,
-            fecha_consulta: document.getElementById('historial-fecha').value,
-            sintomas: document.getElementById('historial-sintomas').value,
-            diagnostico: document.getElementById('historial-diagnostico').value,
-            tratamiento: document.getElementById('historial-tratamiento').value,
-            observaciones: document.getElementById('historial-observaciones').value
-        };
-
-        const historialId = document.getElementById('historial-id').value;
-
-        try {
-            showLoading();
-            
-            if (historialId) {
-                await api.updateHistorial(historialId, historialData);
-                showToast('Historial actualizado exitosamente', 'success');
-            } else {
-                await api.createHistorial(historialData);
-                showToast('Historial creado exitosamente', 'success');
-            }
-            
-            closeHistorialModal();
-            loadHistoriales();
-        } catch (error) {
-            showToast(error.message || 'Error al guardar historial', 'error');
-        } finally {
-            hideLoading();
-        }
-    }
-
-    checkAuthStatus() {
-        const token = api.getAuthToken();
-        const userData = localStorage.getItem(CONFIG.USER_KEY);
-        
-        if (token && userData) {
-            try {
-                this.currentUser = JSON.parse(userData);
-                this.showMainView();
-                this.loadDashboard();
-            } catch (error) {
-                this.logout();
-            }
-        } else {
-            this.showLoginView();
-        }
-    }
-
-    showLoginView() {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('login-view').classList.add('active');
-        document.getElementById('register-view').classList.remove('active');
-        document.getElementById('main-view').classList.remove('active');
-    }
-
-    showMainView() {
-        document.getElementById('loading-screen').style.display = 'none';
-        document.getElementById('login-view').classList.remove('active');
-        document.getElementById('register-view').classList.remove('active');
-        document.getElementById('main-view').classList.add('active');
-        
-        this.updateNavigation();
-    }
-
-    updateNavigation() {
-        if (!this.currentUser) return;
-
-        const { rol } = this.currentUser;
-        
-        // Mostrar/ocultar elementos según el rol
-        const navHistoriales = document.getElementById('nav-historiales');
-        const navUsuarios = document.getElementById('nav-usuarios');
-        
-        if (rol === CONFIG.ROLES.VETERINARIO || rol === CONFIG.ROLES.ADMIN) {
-            navHistoriales.style.display = 'block';
-        } else {
-            navHistoriales.style.display = 'none';
-        }
-        
-        if (rol === CONFIG.ROLES.ADMIN || rol === CONFIG.ROLES.RECEPCIONISTA) {
-            navUsuarios.style.display = 'block';
-        } else {
-            navUsuarios.style.display = 'none';
-        }
-    }
-
-    async loadDashboard() {
-        if (!this.currentUser) return;
-
-        const welcomeMessage = document.getElementById('welcome-message');
-        const userRoleDisplay = document.getElementById('user-role-display');
-        
-        welcomeMessage.textContent = `Bienvenido, ${this.currentUser.nombre}`;
-        userRoleDisplay.textContent = `Rol: ${this.currentUser.rol}`;
-
-        await this.loadStats();
-        await this.loadQuickActions();
-    }
-
-    async loadStats() {
-        try {
-            const statsGrid = document.getElementById('stats-grid');
-            const { rol } = this.currentUser;
-            
-            let stats = [];
-            
-            if (rol === CONFIG.ROLES.CLIENTE) {
-                const mascotas = await api.getMascotas();
-                const citas = await api.getCitas();
-                
-                stats = [
-                    { title: 'Mis Mascotas', value: mascotas.length, icon: 'fas fa-paw', color: '#28a745' },
-                    { title: 'Mis Citas', value: citas.length, icon: 'fas fa-calendar', color: '#007bff' }
-                ];
-            } else if (rol === CONFIG.ROLES.VETERINARIO) {
-                const historiales = await api.getHistoriales();
-                const citas = await api.getCitas();
-                
-                stats = [
-                    { title: 'Historiales', value: historiales.length, icon: 'fas fa-file-medical', color: '#17a2b8' },
-                    { title: 'Citas', value: citas.length, icon: 'fas fa-calendar', color: '#007bff' }
-                ];
-            } else if (rol === CONFIG.ROLES.ADMIN || rol === CONFIG.ROLES.RECEPCIONISTA) {
-                const usuarios = await api.getUsers();
-                const mascotas = await api.getMascotas();
-                const citas = await api.getCitas();
-                const historiales = await api.getHistoriales();
-                
-                stats = [
-                    { title: 'Usuarios', value: usuarios.length, icon: 'fas fa-users', color: '#6f42c1' },
-                    { title: 'Mascotas', value: mascotas.length, icon: 'fas fa-paw', color: '#28a745' },
-                    { title: 'Citas', value: citas.length, icon: 'fas fa-calendar', color: '#007bff' },
-                    { title: 'Historiales', value: historiales.length, icon: 'fas fa-file-medical', color: '#17a2b8' }
-                ];
-            }
-            
-            statsGrid.innerHTML = stats.map(stat => `
-                <div class="stat-card" style="border-left-color: ${stat.color}">
-                    <div class="stat-icon" style="color: ${stat.color}">
-                        <i class="${stat.icon}"></i>
-                    </div>
-                    <div class="stat-content">
-                        <h3>${stat.value}</h3>
-                        <p>${stat.title}</p>
-                    </div>
-                </div>
-            `).join('');
-            
-        } catch (error) {
-            console.error('Error loading stats:', error);
-        }
-    }
-
-    async loadQuickActions() {
-        const quickActions = document.getElementById('quick-actions');
-        const { rol } = this.currentUser;
-        
-        let actions = [];
-        
-        if (rol === CONFIG.ROLES.CLIENTE) {
-            actions = [
-                { title: 'Agregar Mascota', icon: 'fas fa-plus', action: 'showAddMascota()', color: '#28a745' },
-                { title: 'Nueva Cita', icon: 'fas fa-calendar-plus', action: 'showAddCita()', color: '#007bff' }
-            ];
-        } else if (rol === CONFIG.ROLES.VETERINARIO) {
-            actions = [
-                { title: 'Nuevo Historial', icon: 'fas fa-file-medical', action: 'showAddHistorial()', color: '#17a2b8' },
-                { title: 'Ver Citas', icon: 'fas fa-calendar', action: 'showSection(\'citas\')', color: '#007bff' }
-            ];
-        } else if (rol === CONFIG.ROLES.ADMIN || rol === CONFIG.ROLES.RECEPCIONISTA) {
-            actions = [
-                { title: 'Ver Usuarios', icon: 'fas fa-users', action: 'showSection(\'usuarios\')', color: '#6f42c1' },
-                { title: 'Ver Citas', icon: 'fas fa-calendar', action: 'showSection(\'citas\')', color: '#007bff' }
-            ];
-        }
-        
-        quickActions.innerHTML = actions.map(action => `
-            <button class="quick-action-btn" onclick="${action.action}" style="border-color: ${action.color}">
-                <i class="${action.icon}" style="color: ${action.color}"></i>
-                <span>${action.title}</span>
+        toast.innerHTML = `
+            <i class="${icons[type] || icons.info}"></i>
+            <span class="toast-message">${this.escapeHtml(message)}</span>
+            <button class="toast-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
             </button>
-        `).join('');
+        `;
+
+        toastContainer.appendChild(toast);
+
+        // Mostrar toast con animación
+        setTimeout(() => toast.classList.add('show'), 100);
+
+        // Remover toast automáticamente
+        setTimeout(() => {
+            toast.classList.remove('show');
+            setTimeout(() => toast.remove(), 300);
+        }, duration);
     }
 
-    logout() {
-        api.removeAuthToken();
-        localStorage.removeItem(CONFIG.USER_KEY);
-        this.currentUser = null;
-        this.showLoginView();
-        showToast('Sesión cerrada', 'info');
+    // === FORMULARIOS ===
+    setupFormListeners() {
+        // Validación en tiempo real
+        document.addEventListener('input', (e) => {
+            if (e.target.matches('input, textarea, select')) {
+                this.validateField(e.target);
+            }
+        });
+
+        // Mostrar/ocultar contraseñas
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('.toggle-password')) {
+                this.togglePassword(e.target);
+            }
+        });
+    }
+
+    validateField(field) {
+        const formGroup = field.closest('.form-group');
+        if (!formGroup) return;
+
+        // Remover errores anteriores
+        this.clearFieldError(formGroup);
+
+        // Validar según el tipo de campo
+        let isValid = true;
+        let errorMessage = '';
+
+        switch (field.type) {
+            case 'email':
+                isValid = this.isValidEmail(field.value);
+                errorMessage = 'Ingresa un email válido';
+                break;
+            case 'tel':
+                isValid = this.isValidPhone(field.value);
+                errorMessage = 'Ingresa un teléfono válido';
+                break;
+            case 'password':
+                isValid = field.value.length >= 6;
+                errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+                break;
+            default:
+                if (field.required && !field.value.trim()) {
+                    isValid = false;
+                    errorMessage = 'Este campo es requerido';
+                }
+        }
+
+        if (!isValid && field.value.trim()) {
+            this.showFieldError(formGroup, errorMessage);
+        }
+    }
+
+    showFieldError(formGroup, message) {
+        formGroup.classList.add('error');
+        
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'error-message';
+        errorDiv.innerHTML = `<i class="fas fa-exclamation-circle"></i> ${message}`;
+        formGroup.appendChild(errorDiv);
+    }
+
+    clearFieldError(formGroup) {
+        formGroup.classList.remove('error');
+        const errorMessage = formGroup.querySelector('.error-message');
+        if (errorMessage) {
+            errorMessage.remove();
+        }
+    }
+
+    clearFormErrors(form) {
+        form.querySelectorAll('.form-group').forEach(group => {
+            this.clearFieldError(group);
+        });
+    }
+
+    // === VALIDACIONES ===
+    isValidEmail(email) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    }
+
+    isValidPhone(phone) {
+        const phoneRegex = /^[\d\s\-\+\(\)]+$/;
+        return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 7;
+    }
+
+    // === PASSWORD TOGGLE ===
+    togglePassword(button) {
+        const input = button.parentElement.querySelector('input');
+        const icon = button.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+        }
+    }
+
+    // === LOADING STATES ===
+    showLoading(container = null) {
+        const target = container || document.body;
+        const loading = document.createElement('div');
+        loading.className = 'loading-overlay';
+        loading.innerHTML = `
+            <div class="loading-spinner">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Cargando...</p>
+            </div>
+        `;
+        target.appendChild(loading);
+    }
+
+    hideLoading(container = null) {
+        const target = container || document.body;
+        const loading = target.querySelector('.loading-overlay');
+        if (loading) {
+            loading.remove();
+        }
+    }
+
+    setButtonLoading(button, loading) {
+        if (loading) {
+            button.disabled = true;
+            button.dataset.originalText = button.innerHTML;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+        } else {
+            button.disabled = false;
+            if (button.dataset.originalText) {
+                button.innerHTML = button.dataset.originalText;
+                delete button.dataset.originalText;
+            }
+        }
+    }
+
+    // === THEMES ===
+    loadTheme() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        this.setTheme(savedTheme);
+    }
+
+    setTheme(theme) {
+        this.currentTheme = theme;
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+    }
+
+    toggleTheme() {
+        const newTheme = this.currentTheme === 'light' ? 'dark' : 'light';
+        this.setTheme(newTheme);
+    }
+
+    // === UTILIDADES ===
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    formatDate(date) {
+        return new Date(date).toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    formatDateTime(dateTime) {
+        return new Date(dateTime).toLocaleString('es-ES', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+    }
+
+    formatCurrency(amount) {
+        return new Intl.NumberFormat('es-MX', {
+            style: 'currency',
+            currency: 'MXN'
+        }).format(amount);
+    }
+
+    // === ANIMACIONES ===
+    fadeIn(element, duration = 300) {
+        element.style.opacity = '0';
+        element.style.display = 'block';
+        
+        let start = null;
+        const animate = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = timestamp - start;
+            const opacity = Math.min(progress / duration, 1);
+            
+            element.style.opacity = opacity;
+            
+            if (progress < duration) {
+                requestAnimationFrame(animate);
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    }
+
+    fadeOut(element, duration = 300) {
+        let start = null;
+        const animate = (timestamp) => {
+            if (!start) start = timestamp;
+            const progress = timestamp - start;
+            const opacity = Math.max(1 - progress / duration, 0);
+            
+            element.style.opacity = opacity;
+            
+            if (progress < duration) {
+                requestAnimationFrame(animate);
+            } else {
+                element.style.display = 'none';
+            }
+        };
+        
+        requestAnimationFrame(animate);
+    }
+
+    // === CONFIRMACIONES ===
+    async confirm(message, title = 'Confirmar') {
+        return new Promise((resolve) => {
+            if (window.navigator && navigator.notification) {
+                navigator.notification.confirm(
+                    message,
+                    (buttonIndex) => {
+                        resolve(buttonIndex === 1);
+                    },
+                    title,
+                    ['Sí', 'No']
+                );
+            } else {
+                resolve(confirm(message));
+            }
+        });
+    }
+
+    async alert(message, title = 'Aviso') {
+        return new Promise((resolve) => {
+            if (window.navigator && navigator.notification) {
+                navigator.notification.alert(
+                    message,
+                    () => resolve(),
+                    title,
+                    'OK'
+                );
+            } else {
+                alert(message);
+                resolve();
+            }
+        });
+    }
+
+    // === VIBRACIÓN ===
+    vibrate(duration = 100) {
+        if (window.navigator && navigator.vibrate) {
+            navigator.vibrate(duration);
+        }
+    }
+
+    // === SONIDOS ===
+    playSound(type = 'notification') {
+        // Implementar sonidos si es necesario
+        this.vibrate(50);
     }
 }
 
-// Crear instancia global de UI
-const ui = new UI();
+// Crear instancia global
+const uiManager = new UIManager();
 
-// Funciones globales para navegación
-window.showLogin = () => {
-    document.getElementById('login-view').classList.add('active');
-    document.getElementById('register-view').classList.remove('active');
+// Funciones globales
+window.showToast = (message, type = 'info') => {
+    uiManager.showToast(message, type);
 };
 
-window.showRegister = () => {
-    document.getElementById('login-view').classList.remove('active');
-    document.getElementById('register-view').classList.add('active');
+window.closeAllModals = () => {
+    uiManager.closeAllModals();
 };
 
-window.logout = () => {
-    ui.logout();
+window.showLoading = (container) => {
+    uiManager.showLoading(container);
 };
 
-window.showProfile = () => {
-    showSection('perfil');
-    loadProfile();
+window.hideLoading = (container) => {
+    uiManager.hideLoading(container);
 };
 
-// Funciones de navegación de secciones
-window.showSection = (section) => {
-    // Ocultar todas las secciones
-    document.querySelectorAll('.content-section').forEach(el => {
-        el.classList.remove('active');
-    });
-    
-    // Mostrar la sección seleccionada
-    document.getElementById(`${section}-content`).classList.add('active');
-    
-    // Actualizar navegación
-    document.querySelectorAll('.nav-item').forEach(el => {
-        el.classList.remove('active');
-    });
-    
-    // Actualizar título del header
-    const titles = {
-        'dashboard': 'Dashboard',
-        'mascotas': 'Mis Mascotas',
-        'citas': 'Citas',
-        'historiales': 'Historiales Médicos',
-        'usuarios': 'Usuarios',
-        'perfil': 'Mi Perfil'
-    };
-    
-    document.getElementById('header-title').textContent = titles[section] || 'Dashboard';
-    
-    // Cargar datos según la sección
-    switch(section) {
-        case 'dashboard':
-            ui.loadDashboard();
-            break;
-        case 'mascotas':
-            loadMascotas();
-            break;
-        case 'citas':
-            loadCitas();
-            break;
-        case 'historiales':
-            loadHistoriales();
-            break;
-        case 'usuarios':
-            loadUsuarios();
-            break;
-        case 'perfil':
-            loadProfile();
-            break;
-    }
+window.setButtonLoading = (button, loading) => {
+    uiManager.setButtonLoading(button, loading);
 };
 
-// Funciones de utilidad
-window.togglePassword = (inputId) => {
-    const input = document.getElementById(inputId);
-    const button = input.nextElementSibling;
-    const icon = button.querySelector('i');
-    
-    if (input.type === 'password') {
-        input.type = 'text';
-        icon.className = 'fas fa-eye-slash';
-    } else {
-        input.type = 'password';
-        icon.className = 'fas fa-eye';
-    }
+window.togglePassword = (button) => {
+    uiManager.togglePassword(button);
+};
+
+window.confirm = (message, title) => {
+    return uiManager.confirm(message, title);
+};
+
+window.alert = (message, title) => {
+    return uiManager.alert(message, title);
+};
+
+window.vibrate = (duration) => {
+    uiManager.vibrate(duration);
 };
 
 // Exportar para uso global
-window.ui = ui; 
+window.uiManager = uiManager;
+
+Logger.info('Módulo de UI cargado correctamente'); 

@@ -2,18 +2,55 @@
 class UsuariosManager {
     constructor() {
         this.usuarios = [];
+        this.currentUser = null;
+        this.init();
+    }
+
+    init() {
+        // Obtener usuario actual
+        this.currentUser = Storage.get(CONFIG.STORAGE_KEYS.USER);
+        
+        // Verificar permisos
+        if (!this.hasPermission()) {
+            Logger.warn('Usuario sin permisos para gestionar usuarios');
+            return;
+        }
+        
+        // Configurar event listeners
+        this.setupEventListeners();
+    }
+
+    hasPermission() {
+        if (!this.currentUser) return false;
+        
+        const role = this.currentUser.rol;
+        return role === 'admin' || role === 'recepcionista';
+    }
+
+    setupEventListeners() {
+        // Filtro de usuarios
+        const usuariosFilter = document.getElementById('usuarios-filter');
+        if (usuariosFilter) {
+            usuariosFilter.addEventListener('change', () => this.renderUsuarios());
+        }
     }
 
     async loadUsuarios() {
         try {
-            showLoading();
-            const usuarios = await api.getUsers();
-            this.usuarios = usuarios;
+            this.setLoading(true);
+            
+            const response = await api.getUsuarios();
+            this.usuarios = response.usuarios || [];
+            
             this.renderUsuarios();
+            Logger.info('Usuarios cargados:', this.usuarios.length);
+            
         } catch (error) {
-            showToast(error.message || 'Error al cargar usuarios', 'error');
+            Logger.error('Error cargando usuarios:', error);
+            this.showToast(error.message || 'Error al cargar usuarios', 'error');
+            this.renderError();
         } finally {
-            hideLoading();
+            this.setLoading(false);
         }
     }
 
@@ -35,53 +72,54 @@ class UsuariosManager {
                     <i class="fas fa-users"></i>
                     <h3>No hay usuarios registrados</h3>
                     <p>No se encontraron usuarios con el filtro seleccionado</p>
+                    <button class="btn-primary" onclick="loadUsuarios()">
+                        <i class="fas fa-refresh"></i>
+                        Recargar
+                    </button>
                 </div>
             `;
             return;
         }
 
         usuariosList.innerHTML = filteredUsuarios.map(usuario => {
-            const roleColors = {
-                'admin': '#dc3545',
-                'veterinario': '#17a2b8',
-                'recepcionista': '#6f42c1',
-                'cliente': '#28a745'
-            };
+            const initials = this.getInitials(usuario.nombre);
+            const roleName = this.getRoleName(usuario.rol);
             
             return `
                 <div class="item-card usuario-card" data-id="${usuario._id}">
                     <div class="item-header">
                         <div class="item-icon">
-                            <i class="fas fa-user"></i>
+                            <div class="user-avatar">
+                                ${initials}
+                            </div>
                         </div>
                         <div class="item-info">
-                            <h3>${usuario.nombre}</h3>
-                            <p>${usuario.email}</p>
+                            <h3>${this.escapeHtml(usuario.nombre)}</h3>
+                            <p>${this.escapeHtml(usuario.email)}</p>
                         </div>
                         <div class="item-status">
-                            <span class="role-badge" style="background-color: ${roleColors[usuario.rol] || '#6c757d'}">
-                                ${usuario.rol}
+                            <span class="role-badge ${usuario.rol}">
+                                ${roleName}
                             </span>
                         </div>
                         <div class="item-actions">
-                            <button class="action-btn" onclick="editUsuario('${usuario._id}')" title="Editar">
-                                <i class="fas fa-edit"></i>
+                            ${this.currentUser.rol === 'admin' ? `
+                            <button class="item-btn delete" onclick="deleteUsuario('${usuario._id}')" title="Eliminar">
+                                <i class="fas fa-trash"></i>
                             </button>
-                            ${usuario.rol !== 'admin' ? `
-                                <button class="action-btn delete" onclick="deleteUsuario('${usuario._id}')" title="Eliminar">
-                                    <i class="fas fa-trash"></i>
-                                </button>
                             ` : ''}
                         </div>
                     </div>
-                    <div class="item-details">
-                        <div class="detail-item">
-                            <span class="label">Teléfono:</span>
-                            <span class="value">${usuario.telefono || 'No especificado'}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Dirección:</span>
-                            <span class="value">${usuario.direccion || 'No especificada'}</span>
+                    <div class="item-content">
+                        <div class="item-meta">
+                            <div class="item-meta-item">
+                                <i class="fas fa-phone"></i>
+                                <span>${usuario.telefono || 'No especificado'}</span>
+                            </div>
+                            <div class="item-meta-item">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>${usuario.direccion || 'No especificada'}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -89,46 +127,97 @@ class UsuariosManager {
         }).join('');
     }
 
+    renderError() {
+        const usuariosList = document.getElementById('usuarios-list');
+        if (!usuariosList) return;
+
+        usuariosList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error al cargar usuarios</h3>
+                <p>No se pudieron cargar los usuarios. Verifica tu conexión.</p>
+                <button class="btn-primary" onclick="loadUsuarios()">
+                    <i class="fas fa-refresh"></i>
+                    Reintentar
+                </button>
+            </div>
+        `;
+    }
+
     async deleteUsuario(id) {
         const usuario = this.usuarios.find(u => u._id === id);
         if (!usuario) return;
 
-        if (usuario.rol === 'admin') {
-            showToast('No se puede eliminar un usuario administrador', 'error');
+        // No permitir eliminar al usuario actual
+        if (usuario._id === this.currentUser._id) {
+            this.showToast('No puedes eliminar tu propia cuenta', 'error');
             return;
         }
 
-        if (!confirm(`¿Estás seguro de que quieres eliminar al usuario ${usuario.nombre}?`)) {
-            return;
+        // Confirmar eliminación
+        if (window.navigator && navigator.notification) {
+            navigator.notification.confirm(
+                `¿Estás seguro de que quieres eliminar a ${usuario.nombre}?`,
+                (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        this.performDelete(id);
+                    }
+                },
+                'Eliminar Usuario',
+                ['Sí', 'No']
+            );
+        } else {
+            if (confirm(`¿Estás seguro de que quieres eliminar a ${usuario.nombre}?`)) {
+                await this.performDelete(id);
+            }
         }
+    }
 
+    async performDelete(id) {
         try {
-            showLoading();
-            await api.deleteUser(id);
-            showToast('Usuario eliminado exitosamente', 'success');
+            this.setLoading(true);
+            await api.deleteUsuario(id);
+            this.showToast('Usuario eliminado exitosamente', 'success');
             await this.loadUsuarios();
         } catch (error) {
-            showToast(error.message || 'Error al eliminar usuario', 'error');
+            Logger.error('Error eliminando usuario:', error);
+            this.showToast(error.message || 'Error al eliminar usuario', 'error');
         } finally {
-            hideLoading();
+            this.setLoading(false);
         }
     }
 
-    async editUsuario(id) {
-        const usuario = this.usuarios.find(u => u._id === id);
-        if (!usuario) return;
-
-        // Por ahora, solo mostraremos un mensaje
-        // En una implementación completa, aquí se abriría un modal de edición
-        showToast(`Editar usuario: ${usuario.nombre}`, 'info');
+    setLoading(loading) {
+        // Implementar loading si es necesario
     }
 
-    getRoleStats() {
-        const stats = {};
-        this.usuarios.forEach(usuario => {
-            stats[usuario.rol] = (stats[usuario.rol] || 0) + 1;
-        });
-        return stats;
+    showToast(message, type = 'info') {
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    getInitials(name) {
+        if (!name) return 'U';
+        return name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
+    }
+
+    getRoleName(rol) {
+        const roleNames = {
+            'admin': 'Administrador',
+            'veterinario': 'Veterinario',
+            'recepcionista': 'Recepcionista',
+            'cliente': 'Cliente'
+        };
+        return roleNames[rol] || rol;
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
@@ -140,13 +229,11 @@ window.loadUsuarios = () => {
     usuariosManager.loadUsuarios();
 };
 
-window.editUsuario = (id) => {
-    usuariosManager.editUsuario(id);
-};
-
 window.deleteUsuario = (id) => {
     usuariosManager.deleteUsuario(id);
 };
 
 // Exportar para uso global
-window.usuariosManager = usuariosManager; 
+window.usuariosManager = usuariosManager;
+
+Logger.info('Módulo de usuarios cargado correctamente'); 

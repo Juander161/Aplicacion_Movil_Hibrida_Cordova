@@ -1,92 +1,170 @@
-// Módulo de API para comunicaciones con el backend
-class API {
+// Cliente API para aplicación móvil de la Clínica Veterinaria
+class APIClient {
     constructor() {
         this.baseURL = CONFIG.API_BASE_URL;
-        this.timeout = CONFIG.REQUEST_TIMEOUT;
+        this.token = Storage.get(CONFIG.STORAGE_KEYS.TOKEN);
+        this.retryAttempts = CONFIG.NETWORK.RETRY_ATTEMPTS;
+        this.retryDelay = CONFIG.NETWORK.RETRY_DELAY;
     }
 
-    // Función para obtener el token de autenticación
-    getAuthToken() {
-        return localStorage.getItem(CONFIG.TOKEN_KEY);
+    // Configurar token de autenticación
+    setToken(token) {
+        this.token = token;
+        Storage.set(CONFIG.STORAGE_KEYS.TOKEN, token);
+        Logger.debug('Token actualizado');
     }
 
-    // Función para establecer el token de autenticación
-    setAuthToken(token) {
-        localStorage.setItem(CONFIG.TOKEN_KEY, token);
+    // Limpiar token
+    clearToken() {
+        this.token = null;
+        Storage.remove(CONFIG.STORAGE_KEYS.TOKEN);
+        Logger.debug('Token eliminado');
     }
 
-    // Función para eliminar el token de autenticación
-    removeAuthToken() {
-        localStorage.removeItem(CONFIG.TOKEN_KEY);
-    }
-
-    // Función para obtener headers de autenticación
-    getAuthHeaders() {
-        const token = this.getAuthToken();
-        return {
+    // Headers por defecto
+    getHeaders() {
+        const headers = {
             'Content-Type': 'application/json',
-            'Authorization': token ? `Bearer ${token}` : ''
+            'Accept': 'application/json'
         };
+
+        if (this.token) {
+            headers['Authorization'] = `Bearer ${this.token}`;
+        }
+
+        return headers;
     }
 
-    // Función para hacer peticiones HTTP
+    // Método HTTP genérico con reintentos
     async request(endpoint, options = {}) {
         const url = `${this.baseURL}${endpoint}`;
-        
-        const defaultOptions = {
-            headers: this.getAuthHeaders(),
-            timeout: this.timeout
-        };
-
-        const requestOptions = {
-            ...defaultOptions,
+        const config = {
+            method: 'GET',
+            headers: this.getHeaders(),
+            timeout: CONFIG.NETWORK.TIMEOUT,
             ...options
         };
 
+        Logger.debug(`${config.method} ${url}`, config);
+
+        for (let attempt = 1; attempt <= this.retryAttempts; attempt++) {
+            try {
+                // Verificar conexión antes de hacer la petición
+                if (!isOnline()) {
+                    throw new Error('Sin conexión a internet');
+                }
+
+                const response = await this.fetchWithTimeout(url, config);
+                
+                // Manejar respuestas de error HTTP
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.message || `HTTP ${response.status}`);
+                }
+
+                // Verificar si la respuesta tiene contenido
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    // Si no es JSON, verificar si hay contenido
+                    const text = await response.text();
+                    if (!text.trim()) {
+                        // Respuesta vacía, devolver objeto por defecto
+                        Logger.warn('Respuesta vacía del servidor, usando datos por defecto');
+                        return this.getDefaultResponse(endpoint);
+                    }
+                    // Intentar parsear como JSON
+                    try {
+                        const data = JSON.parse(text);
+                        Logger.debug('Respuesta exitosa:', data);
+                        return data;
+                    } catch (parseError) {
+                        Logger.warn('Error parseando JSON, usando datos por defecto');
+                        return this.getDefaultResponse(endpoint);
+                    }
+                }
+
+                // Intentar parsear JSON
+                const data = await response.json().catch(async (parseError) => {
+                    Logger.warn('Error parseando JSON, intentando leer como texto');
+                    const text = await response.text();
+                    if (!text.trim()) {
+                        return this.getDefaultResponse(endpoint);
+                    }
+                    try {
+                        return JSON.parse(text);
+                    } catch (finalError) {
+                        Logger.error('No se pudo parsear la respuesta como JSON');
+                        return this.getDefaultResponse(endpoint);
+                    }
+                });
+
+                Logger.debug('Respuesta exitosa:', data);
+                return data;
+
+            } catch (error) {
+                Logger.warn(`Intento ${attempt} falló:`, error.message);
+
+                // Si es el último intento o es un error de autenticación, lanzar el error
+                if (attempt === this.retryAttempts || error.message.includes('401') || error.message.includes('403')) {
+                    if (error.message.includes('401')) {
+                        this.handleUnauthorized();
+                    }
+                    throw error;
+                }
+
+                // Esperar antes del siguiente intento
+                await this.delay(this.retryDelay * attempt);
+            }
+        }
+    }
+
+    // Fetch con timeout
+    async fetchWithTimeout(url, config) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), config.timeout);
+
         try {
-            showLoading();
-            
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-            
             const response = await fetch(url, {
-                ...requestOptions,
+                ...config,
                 signal: controller.signal
             });
-
             clearTimeout(timeoutId);
-            hideLoading();
-
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
-            }
-
-            return await response.json();
+            return response;
         } catch (error) {
-            hideLoading();
-            
+            clearTimeout(timeoutId);
             if (error.name === 'AbortError') {
-                throw new Error('La petición tardó demasiado tiempo');
+                throw new Error('Tiempo de espera agotado');
             }
-            
-            if (error.message.includes('401')) {
-                // Token expirado o inválido
-                this.removeAuthToken();
-                showLogin();
-                throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
-            }
-            
             throw error;
         }
     }
 
-    // Métodos GET
+    // Manejar errores de autenticación
+    handleUnauthorized() {
+        Logger.warn('Token expirado o inválido');
+        this.clearToken();
+        
+        // Redirigir al login
+        if (window.showLogin) {
+            window.showLogin();
+        }
+        
+        // Mostrar notificación
+        if (window.showToast) {
+            window.showToast('Sesión expirada. Por favor, inicia sesión nuevamente.', 'error');
+        }
+    }
+
+    // Función de delay para reintentos
+    delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // Métodos HTTP básicos
     async get(endpoint) {
         return this.request(endpoint, { method: 'GET' });
     }
 
-    // Métodos POST
     async post(endpoint, data) {
         return this.request(endpoint, {
             method: 'POST',
@@ -94,7 +172,6 @@ class API {
         });
     }
 
-    // Métodos PUT
     async put(endpoint, data) {
         return this.request(endpoint, {
             method: 'PUT',
@@ -102,194 +179,295 @@ class API {
         });
     }
 
-    // Métodos DELETE
     async delete(endpoint) {
         return this.request(endpoint, { method: 'DELETE' });
     }
 
-    // ===== ENDPOINTS DE AUTENTICACIÓN =====
-    
-    // Login
+    // === ENDPOINTS DE AUTENTICACIÓN ===
     async login(email, password) {
-        return this.post('/auth/login', { email, password });
+        try {
+            const response = await this.post('/auth/login', { email, password });
+            
+            if (response.token) {
+                this.setToken(response.token);
+                Storage.set(CONFIG.STORAGE_KEYS.USER, response.usuario);
+                Logger.info('Login exitoso');
+            }
+            
+            return response;
+        } catch (error) {
+            Logger.error('Error en login:', error);
+            throw error;
+        }
     }
 
-    // Registro
     async register(userData) {
-        return this.post('/auth/registro', userData);
+        try {
+            const response = await this.post('/auth/registro', userData);
+            Logger.info('Registro exitoso');
+            return response;
+        } catch (error) {
+            Logger.error('Error en registro:', error);
+            throw error;
+        }
     }
 
-    // Obtener perfil del usuario
     async getProfile() {
-        return this.get('/auth/perfil');
+        try {
+            const response = await this.get('/auth/perfil');
+            Storage.set(CONFIG.STORAGE_KEYS.USER, response.usuario);
+            return response;
+        } catch (error) {
+            Logger.error('Error obteniendo perfil:', error);
+            throw error;
+        }
     }
 
-    // ===== ENDPOINTS DE USUARIOS =====
-    
-    // Obtener todos los usuarios
-    async getUsers() {
-        return this.get('/usuarios');
+    // === ENDPOINTS DE USUARIOS ===
+    async getUsuarios(filtro = '') {
+        const endpoint = filtro ? `/usuarios?rol=${filtro}` : '/usuarios';
+        return this.get(endpoint);
     }
 
-    // Obtener usuario por ID
-    async getUser(id) {
+    async getUsuario(id) {
         return this.get(`/usuarios/${id}`);
     }
 
-    // Actualizar usuario
-    async updateUser(id, userData) {
+    async updateUsuario(id, userData) {
         return this.put(`/usuarios/${id}`, userData);
     }
 
-    // Eliminar usuario
-    async deleteUser(id) {
+    async deleteUsuario(id) {
         return this.delete(`/usuarios/${id}`);
     }
 
-    // ===== ENDPOINTS DE MASCOTAS =====
-    
-    // Obtener todas las mascotas
+    // === ENDPOINTS DE MASCOTAS ===
     async getMascotas() {
         return this.get('/mascotas');
     }
 
-    // Obtener mascota por ID
     async getMascota(id) {
         return this.get(`/mascotas/${id}`);
     }
 
-    // Crear nueva mascota
     async createMascota(mascotaData) {
         return this.post('/mascotas', mascotaData);
     }
 
-    // Actualizar mascota
     async updateMascota(id, mascotaData) {
         return this.put(`/mascotas/${id}`, mascotaData);
     }
 
-    // Eliminar mascota
     async deleteMascota(id) {
         return this.delete(`/mascotas/${id}`);
     }
 
-    // ===== ENDPOINTS DE HISTORIALES MÉDICOS =====
-    
-    // Obtener todos los historiales
-    async getHistoriales() {
-        return this.get('/historiales');
+    // === ENDPOINTS DE CITAS ===
+    async getCitas(estado = '') {
+        const endpoint = estado ? `/citas?estado=${estado}` : '/citas';
+        return this.get(endpoint);
     }
 
-    // Obtener historial por ID
-    async getHistorial(id) {
-        return this.get(`/historiales/${id}`);
-    }
-
-    // Crear nuevo historial
-    async createHistorial(historialData) {
-        return this.post('/historiales', historialData);
-    }
-
-    // Actualizar historial
-    async updateHistorial(id, historialData) {
-        return this.put(`/historiales/${id}`, historialData);
-    }
-
-    // Eliminar historial
-    async deleteHistorial(id) {
-        return this.delete(`/historiales/${id}`);
-    }
-
-    // ===== ENDPOINTS DE CITAS =====
-    
-    // Obtener todas las citas
-    async getCitas() {
-        return this.get('/citas');
-    }
-
-    // Obtener cita por ID
     async getCita(id) {
         return this.get(`/citas/${id}`);
     }
 
-    // Crear nueva cita
     async createCita(citaData) {
         return this.post('/citas', citaData);
     }
 
-    // Actualizar cita
     async updateCita(id, citaData) {
         return this.put(`/citas/${id}`, citaData);
     }
 
-    // Eliminar cita
     async deleteCita(id) {
         return this.delete(`/citas/${id}`);
     }
 
-    // ===== FUNCIONES DE UTILIDAD =====
-    
-    // Función para manejar errores de red
-    handleNetworkError(error) {
-        console.error('Error de red:', error);
-        
-        if (!navigator.onLine) {
-            showToast('No hay conexión a internet', 'error');
-            return;
-        }
-        
-        if (error.message.includes('fetch')) {
-            showToast('Error de conexión con el servidor', 'error');
-            return;
-        }
-        
-        showToast(error.message || 'Error desconocido', 'error');
+    // === ENDPOINTS DE HISTORIALES ===
+    async getHistoriales() {
+        return this.get('/historiales');
     }
 
-    // Función para validar respuesta
-    validateResponse(response) {
-        if (!response) {
-            throw new Error('Respuesta vacía del servidor');
-        }
-        
-        if (response.error) {
-            throw new Error(response.error);
-        }
-        
-        return response;
+    async getHistorial(id) {
+        return this.get(`/historiales/${id}`);
     }
 
-    // Función para formatear datos antes de enviar
-    formatDataForAPI(data) {
-        // Eliminar campos undefined o null
-        const cleanData = {};
-        Object.keys(data).forEach(key => {
-            if (data[key] !== undefined && data[key] !== null && data[key] !== '') {
-                cleanData[key] = data[key];
+    async createHistorial(historialData) {
+        return this.post('/historiales', historialData);
+    }
+
+    async updateHistorial(id, historialData) {
+        return this.put(`/historiales/${id}`, historialData);
+    }
+
+    async deleteHistorial(id) {
+        return this.delete(`/historiales/${id}`);
+    }
+
+    // === MÉTODOS PARA DATOS ESPECÍFICOS ===
+    async getVeterinarios() {
+        try {
+            const response = await this.getUsuarios('veterinario');
+            return response.usuarios || [];
+        } catch (error) {
+            Logger.error('Error obteniendo veterinarios:', error);
+            return [];
+        }
+    }
+
+    async getMascotasByPropietario(propietarioId) {
+        try {
+            const response = await this.getMascotas();
+            return response.mascotas?.filter(m => m.id_propietario === propietarioId) || [];
+        } catch (error) {
+            Logger.error('Error obteniendo mascotas del propietario:', error);
+            return [];
+        }
+    }
+
+    // === MÉTODO PARA VERIFICAR CONECTIVIDAD ===
+    async checkConnection() {
+        try {
+            await this.get('/auth/perfil');
+            return true;
+        } catch (error) {
+            Logger.warn('Error verificando conexión:', error);
+            return false;
+        }
+    }
+
+    // === MÉTODOS PARA MODO OFFLINE ===
+    saveOfflineData(key, data) {
+        const offlineData = Storage.get(CONFIG.STORAGE_KEYS.OFFLINE_DATA) || {};
+        offlineData[key] = {
+            data: data,
+            timestamp: Date.now()
+        };
+        Storage.set(CONFIG.STORAGE_KEYS.OFFLINE_DATA, offlineData);
+    }
+
+    getOfflineData(key) {
+        const offlineData = Storage.get(CONFIG.STORAGE_KEYS.OFFLINE_DATA) || {};
+        return offlineData[key]?.data || null;
+    }
+
+    clearOfflineData() {
+        Storage.remove(CONFIG.STORAGE_KEYS.OFFLINE_DATA);
+    }
+
+    // === SINCRONIZACIÓN DE DATOS ===
+    async syncOfflineData() {
+        if (!isOnline()) {
+            Logger.warn('Sin conexión para sincronizar datos');
+            return false;
+        }
+
+        try {
+            const offlineData = Storage.get(CONFIG.STORAGE_KEYS.OFFLINE_DATA) || {};
+            const pendingActions = offlineData.pendingActions || [];
+
+            for (const action of pendingActions) {
+                try {
+                    await this.executeAction(action);
+                    Logger.info('Acción sincronizada:', action);
+                } catch (error) {
+                    Logger.error('Error sincronizando acción:', action, error);
+                }
             }
+
+            // Limpiar acciones pendientes después de sincronizar
+            delete offlineData.pendingActions;
+            Storage.set(CONFIG.STORAGE_KEYS.OFFLINE_DATA, offlineData);
+
+            return true;
+        } catch (error) {
+            Logger.error('Error en sincronización:', error);
+            return false;
+        }
+    }
+
+    async executeAction(action) {
+        const { method, endpoint, data } = action;
+        
+        switch (method) {
+            case 'POST':
+                return await this.post(endpoint, data);
+            case 'PUT':
+                return await this.put(endpoint, data);
+            case 'DELETE':
+                return await this.delete(endpoint);
+            default:
+                throw new Error(`Método no soportado: ${method}`);
+        }
+    }
+
+    queueOfflineAction(method, endpoint, data = null) {
+        const offlineData = Storage.get(CONFIG.STORAGE_KEYS.OFFLINE_DATA) || {};
+        const pendingActions = offlineData.pendingActions || [];
+        
+        pendingActions.push({
+            id: Date.now(),
+            method,
+            endpoint,
+            data,
+            timestamp: Date.now()
         });
-        return cleanData;
+        
+        offlineData.pendingActions = pendingActions;
+        Storage.set(CONFIG.STORAGE_KEYS.OFFLINE_DATA, offlineData);
+        
+        Logger.info('Acción encolada para sincronización:', { method, endpoint });
     }
 
-    // Función para formatear fechas para la API
-    formatDateForAPI(date) {
-        if (!date) return null;
-        
-        const d = new Date(date);
-        return d.toISOString();
-    }
+    // Obtener respuesta por defecto según el endpoint
+    getDefaultResponse(endpoint) {
+        const defaults = {
+            '/mascotas': { mascotas: [] },
+            '/citas': { citas: [] },
+            '/usuarios': { usuarios: [] },
+            '/historiales': { historiales: [] },
+            '/auth/perfil': { usuario: null },
+            '/auth/login': { token: null, usuario: null },
+            '/auth/register': { usuario: null }
+        };
 
-    // Función para combinar fecha y hora
-    combineDateTime(date, time) {
-        if (!date || !time) return null;
-        
-        const dateTime = new Date(`${date}T${time}`);
-        return dateTime.toISOString();
+        // Buscar el endpoint más cercano
+        for (const [key, value] of Object.entries(defaults)) {
+            if (endpoint.includes(key.replace('/', ''))) {
+                return value;
+            }
+        }
+
+        // Respuesta genérica
+        return { success: true, data: [] };
     }
 }
 
-// Crear instancia global de la API
-const api = new API();
+// Instancia global del cliente API
+window.api = new APIClient();
 
-// Exportar para uso global
-window.api = api; 
+// Funciones de conveniencia para uso global
+window.handleOnline = function() {
+    Logger.info('Conexión restaurada, sincronizando datos...');
+    if (window.showToast) {
+        window.showToast('Conexión restaurada', 'success');
+    }
+    
+    // Sincronizar datos offline
+    api.syncOfflineData();
+    
+    // Recargar datos si es necesario
+    if (window.reloadCurrentSection) {
+        window.reloadCurrentSection();
+    }
+};
+
+window.handleOffline = function() {
+    Logger.warn('Conexión perdida, modo offline activado');
+    if (window.showToast) {
+        window.showToast('Sin conexión. Trabajando en modo offline', 'warning');
+    }
+};
+
+Logger.info('Cliente API inicializado');

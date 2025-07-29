@@ -3,28 +3,77 @@ class HistorialesManager {
     constructor() {
         this.historiales = [];
         this.mascotas = [];
+        this.currentUser = null;
+        this.init();
+    }
+
+    init() {
+        // Obtener usuario actual
+        this.currentUser = Storage.get(CONFIG.STORAGE_KEYS.USER);
+        
+        // Verificar permisos
+        if (!this.hasPermission()) {
+            Logger.warn('Usuario sin permisos para historiales médicos');
+            return;
+        }
+        
+        // Configurar event listeners
+        this.setupEventListeners();
+    }
+
+    hasPermission() {
+        if (!this.currentUser) return false;
+        
+        const role = this.currentUser.rol;
+        return role === 'veterinario' || role === 'admin';
+    }
+
+    setupEventListeners() {
+        // Formulario de historial
+        const historialForm = document.getElementById('historial-form');
+        if (historialForm) {
+            historialForm.addEventListener('submit', (e) => this.handleSubmit(e));
+        }
+
+        // Cerrar modal con escape
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                this.closeModal();
+            }
+        });
     }
 
     async loadHistoriales() {
         try {
-            showLoading();
-            const historiales = await api.getHistoriales();
-            this.historiales = historiales;
+            this.setLoading(true);
+            
+            const response = await api.getHistoriales();
+            this.historiales = response.historiales || [];
+            
             this.renderHistoriales();
+            Logger.info('Historiales cargados:', this.historiales.length);
+            
         } catch (error) {
-            showToast(error.message || 'Error al cargar historiales', 'error');
+            // Usar el nuevo manejador de errores
+            const errorInfo = window.showAPIError(error, 'cargar historiales');
+            
+            // Si el error no es recuperable, mostrar estado de error
+            if (!window.isErrorRecoverable(error)) {
+                this.renderError();
+            }
         } finally {
-            hideLoading();
+            this.setLoading(false);
         }
     }
 
     async loadMascotas() {
         try {
-            const mascotas = await api.getMascotas();
-            this.mascotas = mascotas;
+            const response = await api.getMascotas();
+            this.mascotas = response.mascotas || [];
             this.populateMascotasSelect();
+            Logger.info('Mascotas cargadas para historiales:', this.mascotas.length);
         } catch (error) {
-            console.error('Error loading mascotas:', error);
+            Logger.error('Error cargando mascotas para historiales:', error);
         }
     }
 
@@ -34,7 +83,7 @@ class HistorialesManager {
 
         select.innerHTML = '<option value="">Seleccionar mascota</option>' +
             this.mascotas.map(mascota => 
-                `<option value="${mascota._id}">${mascota.nombre} (${mascota.especie})</option>`
+                `<option value="${mascota._id}">${this.escapeHtml(mascota.nombre)} (${this.escapeHtml(mascota.especie)})</option>`
             ).join('');
     }
 
@@ -49,6 +98,10 @@ class HistorialesManager {
                     <i class="fas fa-file-medical"></i>
                     <h3>No hay historiales médicos</h3>
                     <p>Agrega un nuevo historial para comenzar</p>
+                    <button class="btn-primary" onclick="showAddHistorial()">
+                        <i class="fas fa-plus"></i>
+                        Nuevo Historial
+                    </button>
                 </div>
             `;
             return;
@@ -64,65 +117,186 @@ class HistorialesManager {
                             <i class="fas fa-file-medical"></i>
                         </div>
                         <div class="item-info">
-                            <h3>${mascota ? mascota.nombre : 'Mascota no encontrada'}</h3>
-                            <p>${formatDate(historial.fecha_consulta)}</p>
+                            <h3>${mascota ? this.escapeHtml(mascota.nombre) : 'Mascota no encontrada'}</h3>
+                            <p>${this.formatDate(historial.fecha_consulta)}</p>
                         </div>
                         <div class="item-actions">
-                            <button class="action-btn" onclick="editHistorial('${historial._id}')" title="Editar">
+                            <button class="item-btn edit" onclick="editHistorial('${historial._id}')" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="action-btn delete" onclick="deleteHistorial('${historial._id}')" title="Eliminar">
+                            <button class="item-btn delete" onclick="deleteHistorial('${historial._id}')" title="Eliminar">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </div>
-                    <div class="item-details">
-                        <div class="detail-item">
-                            <span class="label">Síntomas:</span>
-                            <span class="value">${historial.sintomas}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Diagnóstico:</span>
-                            <span class="value">${historial.diagnostico}</span>
-                        </div>
-                        <div class="detail-item">
-                            <span class="label">Tratamiento:</span>
-                            <span class="value">${historial.tratamiento}</span>
-                        </div>
-                        ${historial.observaciones ? `
-                            <div class="detail-item">
-                                <span class="label">Observaciones:</span>
-                                <span class="value">${historial.observaciones}</span>
+                    <div class="item-content">
+                        <div class="item-meta">
+                            <div class="item-meta-item">
+                                <i class="fas fa-stethoscope"></i>
+                                <span><strong>Síntomas:</strong> ${this.escapeHtml(historial.sintomas)}</span>
                             </div>
-                        ` : ''}
+                            <div class="item-meta-item">
+                                <i class="fas fa-notes-medical"></i>
+                                <span><strong>Diagnóstico:</strong> ${this.escapeHtml(historial.diagnostico)}</span>
+                            </div>
+                            <div class="item-meta-item">
+                                <i class="fas fa-pills"></i>
+                                <span><strong>Tratamiento:</strong> ${this.escapeHtml(historial.tratamiento)}</span>
+                            </div>
+                            ${historial.observaciones ? `
+                            <div class="item-meta-item">
+                                <i class="fas fa-clipboard"></i>
+                                <span><strong>Observaciones:</strong> ${this.escapeHtml(historial.observaciones)}</span>
+                            </div>
+                            ` : ''}
+                        </div>
                     </div>
                 </div>
             `;
         }).join('');
     }
 
-    async deleteHistorial(id) {
-        if (!confirm('¿Estás seguro de que quieres eliminar este historial médico?')) {
+    renderError() {
+        const historialesList = document.getElementById('historiales-list');
+        if (!historialesList) return;
+
+        historialesList.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle"></i>
+                <h3>Error al cargar historiales</h3>
+                <p>No se pudieron cargar los historiales. Verifica tu conexión.</p>
+                <button class="btn-primary" onclick="loadHistoriales()">
+                    <i class="fas fa-refresh"></i>
+                    Reintentar
+                </button>
+            </div>
+        `;
+    }
+
+    async handleSubmit(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(event.target);
+        const historialData = {
+            id_mascota: formData.get('mascota'),
+            fecha_consulta: formData.get('fecha'),
+            sintomas: formData.get('sintomas').trim(),
+            diagnostico: formData.get('diagnostico').trim(),
+            tratamiento: formData.get('tratamiento').trim(),
+            observaciones: formData.get('observaciones').trim()
+        };
+
+        // Validaciones
+        if (!this.validateHistorialData(historialData)) {
             return;
         }
 
+        const historialId = formData.get('id');
+        const isEditing = historialId && historialId !== '';
+
         try {
-            showLoading();
-            await api.deleteHistorial(id);
-            showToast('Historial eliminado exitosamente', 'success');
+            this.setLoading(true);
+            
+            let response;
+            if (isEditing) {
+                response = await api.updateHistorial(historialId, historialData);
+                this.showToast('Historial actualizado exitosamente', 'success');
+            } else {
+                response = await api.createHistorial(historialData);
+                this.showToast('Historial creado exitosamente', 'success');
+            }
+
+            // Recargar historiales
             await this.loadHistoriales();
+            
+            // Cerrar modal
+            this.closeModal();
+            
         } catch (error) {
-            showToast(error.message || 'Error al eliminar historial', 'error');
+            Logger.error('Error guardando historial:', error);
+            this.showToast(error.message || 'Error al guardar historial', 'error');
         } finally {
-            hideLoading();
+            this.setLoading(false);
         }
     }
 
-    async editHistorial(id) {
+    validateHistorialData(data) {
+        if (!data.id_mascota) {
+            this.showToast('Debes seleccionar una mascota', 'error');
+            return false;
+        }
+
+        if (!data.fecha_consulta) {
+            this.showToast('Debes seleccionar una fecha de consulta', 'error');
+            return false;
+        }
+
+        if (!data.sintomas || data.sintomas.length < 5) {
+            this.showToast('Los síntomas deben tener al menos 5 caracteres', 'error');
+            return false;
+        }
+
+        if (!data.diagnostico || data.diagnostico.length < 5) {
+            this.showToast('El diagnóstico debe tener al menos 5 caracteres', 'error');
+            return false;
+        }
+
+        if (!data.tratamiento || data.tratamiento.length < 5) {
+            this.showToast('El tratamiento debe tener al menos 5 caracteres', 'error');
+            return false;
+        }
+
+        return true;
+    }
+
+    async deleteHistorial(id) {
         const historial = this.historiales.find(h => h._id === id);
         if (!historial) return;
 
+        // Confirmar eliminación
+        if (window.navigator && navigator.notification) {
+            navigator.notification.confirm(
+                '¿Estás seguro de que quieres eliminar este historial médico?',
+                (buttonIndex) => {
+                    if (buttonIndex === 1) {
+                        this.performDelete(id);
+                    }
+                },
+                'Eliminar Historial',
+                ['Sí', 'No']
+            );
+        } else {
+            if (confirm('¿Estás seguro de que quieres eliminar este historial médico?')) {
+                await this.performDelete(id);
+            }
+        }
+    }
+
+    async performDelete(id) {
+        try {
+            this.setLoading(true);
+            await api.deleteHistorial(id);
+            this.showToast('Historial eliminado exitosamente', 'success');
+            await this.loadHistoriales();
+        } catch (error) {
+            Logger.error('Error eliminando historial:', error);
+            this.showToast(error.message || 'Error al eliminar historial', 'error');
+        } finally {
+            this.setLoading(false);
+        }
+    }
+
+    editHistorial(id) {
+        const historial = this.historiales.find(h => h._id === id);
+        if (!historial) {
+            this.showToast('Historial no encontrado', 'error');
+            return;
+        }
+
         // Llenar el formulario con los datos del historial
+        const form = document.getElementById('historial-form');
+        form.reset();
+        
         document.getElementById('historial-id').value = historial._id;
         document.getElementById('historial-mascota').value = historial.id_mascota;
         document.getElementById('historial-fecha').value = historial.fecha_consulta;
@@ -135,17 +309,75 @@ class HistorialesManager {
         document.getElementById('historial-modal-title').textContent = 'Editar Historial Médico';
 
         // Mostrar el modal
-        document.getElementById('historial-modal').style.display = 'flex';
+        this.showModal();
     }
 
-    resetHistorialForm() {
-        document.getElementById('historial-form').reset();
-        document.getElementById('historial-id').value = '';
+    showAddHistorial() {
+        this.resetForm();
         document.getElementById('historial-modal-title').textContent = 'Nuevo Historial Médico';
-        
-        // Establecer fecha por defecto
-        const now = new Date();
-        document.getElementById('historial-fecha').value = now.toISOString().split('T')[0];
+        this.showModal();
+    }
+
+    resetForm() {
+        const form = document.getElementById('historial-form');
+        if (form) {
+            form.reset();
+            document.getElementById('historial-id').value = '';
+            
+            // Establecer fecha por defecto
+            const now = new Date();
+            document.getElementById('historial-fecha').value = now.toISOString().split('T')[0];
+        }
+    }
+
+    showModal() {
+        const modal = document.getElementById('historial-modal');
+        if (modal) {
+            modal.classList.add('active');
+        }
+    }
+
+    closeModal() {
+        const modal = document.getElementById('historial-modal');
+        if (modal) {
+            modal.classList.remove('active');
+            this.resetForm();
+        }
+    }
+
+    setLoading(loading) {
+        const buttons = document.querySelectorAll('#historial-form .btn-primary');
+        buttons.forEach(btn => {
+            btn.disabled = loading;
+            if (loading) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            } else {
+                btn.innerHTML = '<i class="fas fa-save"></i> Guardar';
+            }
+        });
+    }
+
+    showToast(message, type = 'info') {
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        }
+    }
+
+    formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 }
 
@@ -159,8 +391,7 @@ window.loadHistoriales = async () => {
 };
 
 window.showAddHistorial = () => {
-    historialesManager.resetHistorialForm();
-    document.getElementById('historial-modal').style.display = 'flex';
+    historialesManager.showAddHistorial();
 };
 
 window.editHistorial = (id) => {
@@ -172,9 +403,10 @@ window.deleteHistorial = (id) => {
 };
 
 window.closeHistorialModal = () => {
-    document.getElementById('historial-modal').style.display = 'none';
-    historialesManager.resetHistorialForm();
+    historialesManager.closeModal();
 };
 
 // Exportar para uso global
-window.historialesManager = historialesManager; 
+window.historialesManager = historialesManager;
+
+Logger.info('Módulo de historiales cargado correctamente'); 

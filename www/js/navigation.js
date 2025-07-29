@@ -1,323 +1,342 @@
 // Módulo de navegación
-class Navigation {
+class NavigationManager {
     constructor() {
-        this.currentScreen = 'loginScreen';
-        this.screenHistory = [];
+        this.currentSection = 'dashboard';
+        this.history = [];
+        this.maxHistory = 10;
         this.init();
     }
 
-    // Inicializar navegación
     init() {
-        this.setupGlobalFunctions();
+        this.setupEventListeners();
+        this.setupKeyboardNavigation();
     }
 
-    // Configurar funciones globales de navegación
-    setupGlobalFunctions() {
-        window.showLogin = () => this.showScreen('loginScreen');
-        window.showRegister = () => this.showScreen('registerScreen');
-        window.showDashboard = () => this.showScreen('dashboardScreen');
-        window.showMascotas = () => this.showScreen('mascotasScreen');
-        window.showAddMascota = () => this.showScreen('addMascotaScreen');
-        window.showCitas = () => this.showScreen('citasScreen');
-        window.showAddCita = () => this.showScreen('addCitaScreen');
-        window.showHistoriales = () => this.showScreen('historialesScreen');
-        window.showPerfil = () => this.showScreen('perfilScreen');
-        window.showUsuarios = () => this.showScreen('usuariosScreen');
-    }
+    setupEventListeners() {
+        // Navegación por botones
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('[data-nav]')) {
+                e.preventDefault();
+                const section = e.target.dataset.nav;
+                this.navigateTo(section);
+            }
+        });
 
-    // Mostrar una pantalla específica
-    showScreen(screenId) {
-        // Verificar autenticación para pantallas protegidas
-        if (this.isProtectedScreen(screenId) && !auth.getIsAuthenticated()) {
-            showToast('Debes iniciar sesión para acceder a esta sección', 'error');
-            this.showScreen('loginScreen');
-            return;
-        }
+        // Navegación por enlaces
+        document.addEventListener('click', (e) => {
+            if (e.target.matches('a[href^="#"]')) {
+                e.preventDefault();
+                const section = e.target.getAttribute('href').substring(1);
+                this.navigateTo(section);
+            }
+        });
 
-        // Verificar permisos para pantallas específicas
-        if (!this.hasPermissionForScreen(screenId)) {
-            showToast('No tienes permisos para acceder a esta sección', 'error');
-            return;
-        }
-
-        // Ocultar todas las pantallas
-        this.hideAllScreens();
-
-        // Mostrar la pantalla solicitada
-        const screen = document.getElementById(screenId);
-        if (screen) {
-            screen.classList.add('active');
-            this.currentScreen = screenId;
-            
-            // Agregar a historial
-            this.addToHistory(screenId);
-            
-            // Cargar datos específicos de la pantalla
-            this.loadScreenData(screenId);
-            
-            // Scroll al top
-            screen.scrollTop = 0;
-        } else {
-            console.error(`Pantalla no encontrada: ${screenId}`);
-        }
-    }
-
-    // Ocultar todas las pantallas
-    hideAllScreens() {
-        const screens = document.querySelectorAll('.screen');
-        screens.forEach(screen => {
-            screen.classList.remove('active');
+        // Botón atrás del navegador
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.section) {
+                this.showSection(e.state.section, false);
+            }
         });
     }
 
-    // Verificar si una pantalla requiere autenticación
-    isProtectedScreen(screenId) {
-        const protectedScreens = [
-            'dashboardScreen',
-            'mascotasScreen',
-            'addMascotaScreen',
-            'citasScreen',
-            'addCitaScreen',
-            'historialesScreen',
-            'perfilScreen',
-            'usuariosScreen'
-        ];
-        
-        return protectedScreens.includes(screenId);
+    setupKeyboardNavigation() {
+        document.addEventListener('keydown', (e) => {
+            // Navegación con teclas
+            switch (e.key) {
+                case 'Escape':
+                    this.handleEscape();
+                    break;
+                case 'Backspace':
+                    if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+                        this.goBack();
+                    }
+                    break;
+            }
+        });
     }
 
-    // Verificar permisos para una pantalla específica
-    hasPermissionForScreen(screenId) {
-        if (!auth.getIsAuthenticated()) {
-            return false;
+    navigateTo(section, addToHistory = true) {
+        if (addToHistory) {
+            this.addToHistory(this.currentSection);
+            this.updateURL(section);
         }
+        
+        this.showSection(section);
+    }
 
-        const userRole = auth.getUserRole();
+    showSection(section, updateHistory = true) {
+        try {
+            // Ocultar todas las secciones
+            document.querySelectorAll('.content-section').forEach(sec => {
+                sec.classList.remove('active');
+            });
 
-        // Pantallas específicas por rol
-        const rolePermissions = {
-            [CONFIG.ROLES.ADMIN]: [
-                'dashboardScreen',
-                'mascotasScreen',
-                'addMascotaScreen',
-                'citasScreen',
-                'addCitaScreen',
-                'historialesScreen',
-                'perfilScreen',
-                'usuariosScreen'
-            ],
-            [CONFIG.ROLES.VETERINARIO]: [
-                'dashboardScreen',
-                'mascotasScreen',
-                'citasScreen',
-                'addCitaScreen',
-                'historialesScreen',
-                'perfilScreen'
-            ],
-            [CONFIG.ROLES.RECEPCIONISTA]: [
-                'dashboardScreen',
-                'mascotasScreen',
-                'citasScreen',
-                'addCitaScreen',
-                'perfilScreen',
-                'usuariosScreen'
-            ],
-            [CONFIG.ROLES.CLIENTE]: [
-                'dashboardScreen',
-                'mascotasScreen',
-                'addMascotaScreen',
-                'citasScreen',
-                'addCitaScreen',
-                'perfilScreen'
-            ]
+            // Mostrar sección seleccionada
+            const sectionElement = document.getElementById(`${section}-content`);
+            if (sectionElement) {
+                sectionElement.classList.add('active');
+                this.currentSection = section;
+                
+                // Actualizar navegación activa
+                this.updateActiveNavigation(section);
+                
+                // Actualizar título del header
+                this.updateHeaderTitle(section);
+                
+                // Cargar datos de la sección
+                this.loadSectionData(section);
+                
+                Logger.info('Navegación a sección:', section);
+            } else {
+                Logger.warn('Sección no encontrada:', section);
+                this.showSection('dashboard');
+            }
+        } catch (error) {
+            Logger.error('Error navegando a sección:', error);
+            this.showToast('Error al cargar la sección', 'error');
+        }
+    }
+
+    updateActiveNavigation(section) {
+        // Remover clase activa de todos los elementos de navegación
+        document.querySelectorAll('.nav-item, [data-nav]').forEach(item => {
+            item.classList.remove('active');
+        });
+
+        // Agregar clase activa al elemento correspondiente
+        const activeNav = document.querySelector(`[data-nav="${section}"], .nav-item[onclick*="${section}"]`);
+        if (activeNav) {
+            activeNav.classList.add('active');
+        }
+    }
+
+    updateHeaderTitle(section) {
+        const headerTitle = document.getElementById('header-title');
+        if (!headerTitle) return;
+
+        const titles = {
+            dashboard: 'Dashboard',
+            mascotas: 'Mis Mascotas',
+            citas: 'Citas',
+            historiales: 'Historiales Médicos',
+            usuarios: 'Usuarios',
+            perfil: 'Mi Perfil'
         };
 
-        const allowedScreens = rolePermissions[userRole] || [];
-        return allowedScreens.includes(screenId);
+        headerTitle.textContent = titles[section] || 'Patitas Felices';
     }
 
-    // Agregar pantalla al historial
-    addToHistory(screenId) {
-        // No agregar la misma pantalla consecutivamente
-        if (this.screenHistory[this.screenHistory.length - 1] !== screenId) {
-            this.screenHistory.push(screenId);
-        }
-        
-        // Mantener solo las últimas 10 pantallas
-        if (this.screenHistory.length > 10) {
-            this.screenHistory.shift();
+    async loadSectionData(section) {
+        try {
+            // Cargar datos específicos de la sección
+            switch (section) {
+                case 'dashboard':
+                    if (window.app && window.app.loadDashboard) {
+                        await window.app.loadDashboard();
+                    }
+                    break;
+                case 'mascotas':
+                    if (window.loadMascotas) {
+                        await window.loadMascotas();
+                    }
+                    break;
+                case 'citas':
+                    if (window.loadCitas) {
+                        await window.loadCitas();
+                    }
+                    break;
+                case 'historiales':
+                    if (window.loadHistoriales) {
+                        await window.loadHistoriales();
+                    }
+                    break;
+                case 'usuarios':
+                    if (window.loadUsuarios) {
+                        await window.loadUsuarios();
+                    }
+                    break;
+                case 'perfil':
+                    if (window.app && window.app.loadProfile) {
+                        await window.app.loadProfile();
+                    }
+                    break;
+            }
+        } catch (error) {
+            Logger.error(`Error cargando datos de ${section}:`, error);
         }
     }
 
-    // Ir a la pantalla anterior
+    addToHistory(section) {
+        this.history.push(section);
+        if (this.history.length > this.maxHistory) {
+            this.history.shift();
+        }
+    }
+
     goBack() {
-        if (this.screenHistory.length > 1) {
-            this.screenHistory.pop(); // Remover pantalla actual
-            const previousScreen = this.screenHistory[this.screenHistory.length - 1];
-            this.showScreen(previousScreen);
+        if (this.history.length > 0) {
+            const previousSection = this.history.pop();
+            this.showSection(previousSection, false);
         } else {
             // Si no hay historial, ir al dashboard
-            this.showScreen('dashboardScreen');
+            this.showSection('dashboard');
         }
     }
 
-    // Cargar datos específicos de cada pantalla
-    loadScreenData(screenId) {
-        switch (screenId) {
-            case 'dashboardScreen':
-                this.loadDashboardData();
-                break;
-            case 'mascotasScreen':
-                this.loadMascotasData();
-                break;
-            case 'citasScreen':
-                this.loadCitasData();
-                break;
-            case 'historialesScreen':
-                this.loadHistorialesData();
-                break;
-            case 'usuariosScreen':
-                this.loadUsuariosData();
-                break;
-            case 'addCitaScreen':
-                this.loadAddCitaData();
-                break;
+    updateURL(section) {
+        if (window.history && window.history.pushState) {
+            const url = new URL(window.location);
+            url.hash = section;
+            window.history.pushState({ section }, '', url);
         }
     }
 
-    // Cargar datos del dashboard
-    async loadDashboardData() {
-        try {
-            // Aquí podrías cargar estadísticas o información resumida
-            console.log('Dashboard cargado');
-        } catch (error) {
-            console.error('Error cargando dashboard:', error);
+    handleEscape() {
+        // Cerrar modales abiertos
+        const activeModal = document.querySelector('.modal.active');
+        if (activeModal) {
+            this.closeModal(activeModal);
+            return;
+        }
+
+        // Si estamos en una sección diferente al dashboard, ir al dashboard
+        if (this.currentSection !== 'dashboard') {
+            this.navigateTo('dashboard');
         }
     }
 
-    // Cargar datos de mascotas
-    async loadMascotasData() {
-        try {
-            const mascotas = await api.getMascotas();
-            displayMascotas(mascotas.mascotas || []);
-        } catch (error) {
-            console.error('Error cargando mascotas:', error);
-            api.handleNetworkError(error);
-        }
+    closeModal(modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
     }
 
-    // Cargar datos de citas
-    async loadCitasData() {
-        try {
-            const citas = await api.getCitas();
-            displayCitas(citas.citas || []);
-        } catch (error) {
-            console.error('Error cargando citas:', error);
-            api.handleNetworkError(error);
-        }
+    // === NAVEGACIÓN ESPECÍFICA ===
+    showDashboard() {
+        this.navigateTo('dashboard');
     }
 
-    // Cargar datos de historiales
-    async loadHistorialesData() {
-        try {
-            const historiales = await api.getHistoriales();
-            displayHistoriales(historiales.historiales || []);
-        } catch (error) {
-            console.error('Error cargando historiales:', error);
-            api.handleNetworkError(error);
-        }
+    showMascotas() {
+        this.navigateTo('mascotas');
     }
 
-    // Cargar datos de usuarios
-    async loadUsuariosData() {
-        try {
-            if (!auth.isAdmin()) {
-                showToast('No tienes permisos para ver usuarios', 'error');
-                return;
+    showCitas() {
+        this.navigateTo('citas');
+    }
+
+    showHistoriales() {
+        this.navigateTo('historiales');
+    }
+
+    showUsuarios() {
+        this.navigateTo('usuarios');
+    }
+
+    showPerfil() {
+        this.navigateTo('perfil');
+    }
+
+    // === NAVEGACIÓN CON ROLES ===
+    setupRoleBasedNavigation() {
+        const currentUser = Storage.get(CONFIG.STORAGE_KEYS.USER);
+        if (!currentUser) return;
+
+        const role = currentUser.rol;
+        const navItems = {
+            'nav-historiales': role === 'veterinario' || role === 'admin',
+            'nav-usuarios': role === 'admin' || role === 'recepcionista',
+            'nav-mascotas': true // Todos pueden ver mascotas
+        };
+
+        Object.entries(navItems).forEach(([navId, shouldShow]) => {
+            const navElement = document.getElementById(navId);
+            if (navElement) {
+                navElement.style.display = shouldShow ? 'flex' : 'none';
             }
-            
-            const usuarios = await api.getUsers();
-            displayUsuarios(usuarios.usuarios || []);
-        } catch (error) {
-            console.error('Error cargando usuarios:', error);
-            api.handleNetworkError(error);
+        });
+    }
+
+    // === UTILIDADES ===
+    getCurrentSection() {
+        return this.currentSection;
+    }
+
+    getHistory() {
+        return [...this.history];
+    }
+
+    clearHistory() {
+        this.history = [];
+    }
+
+    showToast(message, type = 'info') {
+        if (window.showToast) {
+            window.showToast(message, type);
+        } else {
+            console.log(`[${type.toUpperCase()}] ${message}`);
         }
     }
 
-    // Cargar datos para agregar cita
-    async loadAddCitaData() {
-        try {
-            const mascotas = await api.getMascotas();
-            const mascotasSelect = document.getElementById('citaMascota');
-            
-            if (mascotasSelect) {
-                mascotasSelect.innerHTML = '<option value="">Selecciona mascota</option>';
-                
-                const mascotasList = mascotas.mascotas || [];
-                mascotasList.forEach(mascota => {
-                    const option = document.createElement('option');
-                    option.value = mascota._id;
-                    option.textContent = `${mascota.nombre} (${mascota.especie})`;
-                    mascotasSelect.appendChild(option);
-                });
-            }
-        } catch (error) {
-            console.error('Error cargando mascotas para cita:', error);
-            api.handleNetworkError(error);
+    // === NAVEGACIÓN EXTERNA ===
+    openExternalLink(url) {
+        if (window.cordova && window.cordova.InAppBrowser) {
+            window.cordova.InAppBrowser.open(url, '_blank');
+        } else {
+            window.open(url, '_blank');
         }
     }
 
-    // Obtener pantalla actual
-    getCurrentScreen() {
-        return this.currentScreen;
-    }
-
-    // Obtener historial de pantallas
-    getScreenHistory() {
-        return [...this.screenHistory];
-    }
-
-    // Verificar si se puede ir hacia atrás
-    canGoBack() {
-        return this.screenHistory.length > 1;
-    }
-
-    // Navegar a una pantalla específica con parámetros
-    navigateTo(screenId, params = {}) {
-        // Guardar parámetros en sessionStorage
-        if (Object.keys(params).length > 0) {
-            sessionStorage.setItem('navigation_params', JSON.stringify(params));
+    // === NAVEGACIÓN PROFUNDA ===
+    handleDeepLink(link) {
+        // Manejar enlaces profundos
+        const sections = ['dashboard', 'mascotas', 'citas', 'historiales', 'usuarios', 'perfil'];
+        const section = sections.find(s => link.includes(s));
+        
+        if (section) {
+            this.navigateTo(section);
+            return true;
         }
         
-        this.showScreen(screenId);
-    }
-
-    // Obtener parámetros de navegación
-    getNavigationParams() {
-        const params = sessionStorage.getItem('navigation_params');
-        if (params) {
-            sessionStorage.removeItem('navigation_params');
-            return JSON.parse(params);
-        }
-        return {};
-    }
-
-    // Limpiar historial de navegación
-    clearHistory() {
-        this.screenHistory = [];
-    }
-
-    // Refrescar pantalla actual
-    refreshCurrentScreen() {
-        this.loadScreenData(this.currentScreen);
+        return false;
     }
 }
 
-// Crear instancia global de navegación
-const navigation = new Navigation();
+// Crear instancia global
+const navigationManager = new NavigationManager();
 
-// Función global para ir hacia atrás
-window.goBack = () => navigation.goBack();
+// Funciones globales
+window.showSection = (section) => {
+    navigationManager.navigateTo(section);
+};
+
+window.showDashboard = () => {
+    navigationManager.showDashboard();
+};
+
+window.showMascotas = () => {
+    navigationManager.showMascotas();
+};
+
+window.showCitas = () => {
+    navigationManager.showCitas();
+};
+
+window.showHistoriales = () => {
+    navigationManager.showHistoriales();
+};
+
+window.showUsuarios = () => {
+    navigationManager.showUsuarios();
+};
+
+window.showPerfil = () => {
+    navigationManager.showPerfil();
+};
+
+window.goBack = () => {
+    navigationManager.goBack();
+};
 
 // Exportar para uso global
-window.navigation = navigation; 
+window.navigationManager = navigationManager;
+
+Logger.info('Módulo de navegación cargado correctamente'); 
